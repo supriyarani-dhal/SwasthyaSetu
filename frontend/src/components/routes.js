@@ -52,6 +52,9 @@ import Authpage from './Screens/Authpage';
 import Dashboard from './Screens/Dashboard';
 import Doctorpage from './Screens/Doctorpage';
 import Header from './Screens/Header'; // Regular header for all pages except doctor
+import AppointmentDetails from './Mobile/pages/Hospitals/AppointmentDetails';
+import NutritionistDietPlan from './Mobile/pages/Nutritionists/NutritionistDietPlan';
+import NutritionistAppointments from './Mobile/pages/Nutritionists/NutritionistAppointments';
 
 function RoutesOfThePage() {
     return (
@@ -135,9 +138,9 @@ function RoutesOfThePage() {
                     <Route path="/medical-records" element={<><MedicalRecords /><NavBar/></>} />    
                     <Route path="/emergency-services" element={<><EmergencyServices/><NavBar/></>} />
                     <Route path="/billing" element={<><Billing/><NavBar/></>} />
-                    {/* <Route path="/appointment/:bookingId" element={<AppointmentDetails />} /> */}
-                    {/* <Route path="/nutritionists" element={<><NutritionistDietPlan/><NavBar/></>} /> */}
-                    {/* <Route path="/nutritionist-appointments" element={<><NutritionistAppointments/><NavBar/></>} /> */}
+                    <Route path="/appointment/:bookingId" element={<AppointmentDetails />} /> 
+                    <Route path="/nutritionists" element={<><NutritionistDietPlan/><NavBar/></>} />
+                    <Route path="/nutritionist-appointments" element={<><NutritionistAppointments/><NavBar/></>} />
 
 
                     {/* devio call routes */}
