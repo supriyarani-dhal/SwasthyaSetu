@@ -1,62 +1,132 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import img1 from "../assets/1.png";
-import img2 from "../assets/2.png";
+import { 
+  Droplet, 
+  AlertTriangle, 
+  Stethoscope, 
+  TestTube, 
+  Pill, 
+  Heart, 
+  Ambulance, 
+  Hospital, 
+  Apple, 
+  FileText, 
+  User,
+  Smile 
+} from 'lucide-react';
+import img1 from "../assets/1.png"; // Blood Donation
+import img2 from "../assets/2.png"; // Accident Alert
+import styles from './Dashboard.module.css'; // Import CSS Module
 
 function Dashboard() {
-  return (
-    <>
-    <div className="container mt-5">
-      <h2 className="text-center mb-5" style={{ color: '#1b558b' }}>Dashboard</h2>
-      <div className="row justify-content-center">
-        {/* Blood Donation Card */}
-        <div className="col-md-4 col-sm-6 mb-4">
-          <div className="card shadow-lg rounded-3 border-0 card-hover">
-            <div className="card-body">
-              <h5 className="card-title" style={{ color: '#1b558b' }}>Blood Donation & Receive</h5>
-              <p className="card-text">Manage blood donation and receiving processes.</p>
-              {/* Responsive image for the card with margin bottom */}
-              <img 
-                src={img1} 
-                alt="Blood Donation"
-                className="card-img-top img-fluid mb-3"  // Added mb-3 for margin-bottom to separate from button
-              />
-              <Link 
-                to="/blood-donation" 
-                className="btn btn-primary w-100 py-2 shadow-sm btn-animate"
-                style={{ backgroundColor: '#1b558b' }}
-              >
-                Go to Blood Donation
-              </Link>
-            </div>
-          </div>
-        </div>
+  const cardData = [
+    {
+      title: "Blood Donation",
+      description: "Manage blood donation and receiving",
+      icon: <Droplet className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/blood-donate-receive",
+      img: img1
+    },
+    {
+      title: "Accident Alert",
+      description: "Monitor emergency accident alerts",
+      icon: <AlertTriangle className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/accident-alert",
+      img: img2
+    },
+    {
+      title: "Doctors",
+      description: "Find and consult with doctors",
+      icon: <Stethoscope className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/doctors"
+    },
+    {
+      title: "Blood Test",
+      description: "Schedule and track blood tests",
+      icon: <TestTube className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/blood-test"
+    },
+    {
+      title: "Medicine Store",
+      description: "Browse medicine stores",
+      icon: <Pill className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/medicine-stores"
+    },
+    {
+      title: "EHR Health Data",
+      description: "View health records",
+      icon: <Heart className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/EHRHealthData"
+    },
+    {
+      title: "Ambulance",
+      description: "Request emergency services",
+      icon: <Ambulance className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/ambulance"
+    },
+    {
+      title: "Hospitals",
+      description: "Explore hospital services",
+      icon: <Hospital className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/hospitals"
+    },
+    {
+      title: "Nutrition",
+      description: "Access diet plans",
+      icon: <Apple className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/nutrition"
+    },
+    {
+      title: "Medical History",
+      description: "Review your medical records",
+      icon: <FileText className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/medicine-history"
+    },
+    {
+      title: "Profile",
+      description: "Manage your account",
+      icon: <User className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/profile"
+    },
+    {
+      title: "Welcome",
+      description: "Start your journey with us",
+      icon: <Smile className={styles.icon} style={{ color: '#1b558b' }} />,
+      path: "/welcome"
+    }
+  ];
 
-        {/* Accident Detection Card */}
-        <div className="col-md-4 col-sm-6 mb-4">
-          <div className="card shadow-lg rounded-3 border-0 card-hover">
-            <div className="card-body">
-              <h5 className="card-title" style={{ color: '#1b558b' }}>Accident Alert</h5>
-              <p className="card-text">Monitor and respond to accident alerts.</p>
-              {/* Responsive image for the card with margin bottom */}
-              <img 
-                src={img2} 
-                alt="Accident Detection"
-                className="card-img-top img-fluid mb-3"  // Added mb-3 for margin-bottom to separate from button
-              />
+  return (
+    <div className={styles.container}>
+      <h2 className={styles.title}>Dashboard</h2>
+      
+      <div className={styles.grid}>
+        {cardData.map((card, index) => (
+          <div key={index} className={styles.card}>
+            <div className={styles.cardContent}>
+              <div className={styles.cardHeader}>
+                {card.icon}
+                <h5 className={styles.cardTitle}>{card.title}</h5>
+              </div>
+              <p className={styles.cardDescription}>{card.description}</p>
+              {card.img && (
+                <img 
+                  src={card.img} 
+                  alt={card.title}
+                  className={styles.cardImage}
+                />
+              )}
               <Link 
-                to="/accident-detection" 
-                className="btn btn-primary w-100 py-2 shadow-sm btn-animate"
-                style={{ backgroundColor: '#1b558b' }}
+                to={card.path}
+                className={styles.cardButton}
               >
-                Go to Accident Alert
+                Go to {card.title}
               </Link>
             </div>
           </div>
-        </div>
+        ))}
       </div>
     </div>
-    </>
   );
 }
 

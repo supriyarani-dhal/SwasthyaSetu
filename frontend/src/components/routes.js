@@ -52,7 +52,6 @@ import Authpage from './Screens/Authpage';
 import Dashboard from './Screens/Dashboard';
 import Doctorpage from './Screens/Doctorpage';
 import Header from './Screens/Header'; // Regular header for all pages except doctor
-import LandingPage from './Screens/landingpage';
 
 function RoutesOfThePage() {
     return (
@@ -60,7 +59,7 @@ function RoutesOfThePage() {
             <div className="App">
                 <Routes>
                     {/* Home and common header */}
-                    <Route path='/Landingpage' element={<><Header /><LandingPage /></>} />
+                    <Route path='/Landingpage' element={<><Header /><Dashboard /></>} />
                     <Route path='/' element={<><Header /><Authpage /></>} />
 
                     {/* Auth routes */}
