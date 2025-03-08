@@ -52,6 +52,8 @@ import EmergencyServices from './Mobile/pages/Hospitals/EmergencyServices';
 import Billing from './Mobile/pages/Hospitals/Billing';
 import AllHospitals from './Mobile/pages/Hospitals/AllHospitals';
 import AppointmentDetails from './Mobile/pages/Hospitals/AppointmentDetails';
+import NutritionistDietPlan from './Mobile/pages/Nutritionists/NutritionistDietPlan';
+import NutritionistAppointments from './Mobile/pages/Nutritionists/NutritionistAppointments';
 
 function RoutesOfThePage() {
     return (
