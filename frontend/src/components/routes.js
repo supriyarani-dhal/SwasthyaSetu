@@ -51,7 +51,7 @@ import Register from './RegisterasUser/Register';
 import Authpage from './Screens/Authpage';
 import Dashboard from './Screens/Dashboard';
 import Doctorpage from './Screens/Doctorpage';
-import Header from './Screens/Header'; // Regular header for all pages except doctor
+import Header from './Screens/Header';
 import AppointmentDetails from './Mobile/pages/Hospitals/AppointmentDetails';
 import NutritionistDietPlan from './Mobile/pages/Nutritionists/NutritionistDietPlan';
 import NutritionistAppointments from './Mobile/pages/Nutritionists/NutritionistAppointments';
@@ -141,14 +141,8 @@ function RoutesOfThePage() {
                     <Route path="/appointment/:bookingId" element={<AppointmentDetails />} /> 
                     <Route path="/nutritionists" element={<><NutritionistDietPlan/><NavBar/></>} />
                     <Route path="/nutritionist-appointments" element={<><NutritionistAppointments/><NavBar/></>} />
-
-
                     {/* devio call routes */}
                     <Route path='/vedio-calling' element={<VideoCall />} />
-
-
-
-
                 </Routes>
             </div>
         </Router>
