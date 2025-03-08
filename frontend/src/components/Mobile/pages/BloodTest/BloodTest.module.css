@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 480px;
+  max-width: 480px; /* Default for mobile */
   margin: 0 auto;
   background: #f5f7fa;
   min-height: 100vh;
@@ -28,7 +28,7 @@
 
 .cardGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, 1fr); /* Default for mobile */
   gap: 15px;
   margin-bottom: 20px;
 }
@@ -133,7 +133,7 @@
 
 .labsGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, 1fr); /* Default for mobile */
   gap: 15px;
 }
 
@@ -201,6 +201,163 @@
   font-size: 0.8rem;
 }
 
+/* Tablet View (768px and up) */
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+    padding: 30px 20px 80px;
+  }
+
+  .greeting {
+    font-size: 2.5rem;
+  }
+
+  .cardGrid {
+    grid-template-columns: repeat(4, 1fr); /* 4 columns for tablet */
+    gap: 20px;
+  }
+
+  .card {
+    padding: 25px;
+  }
+
+  .iconContainer {
+    padding: 12px;
+  }
+
+  .greenIcon,
+  .purpleIcon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .cardTitle {
+    font-size: 1.3rem;
+  }
+
+  .cardSubtitle {
+    font-size: 1rem;
+  }
+
+  .labsGrid {
+    grid-template-columns: repeat(4, 1fr); /* 4 columns for tablet */
+    gap: 20px;
+  }
+
+  .labCard {
+    padding: 20px;
+  }
+
+  .labAvatar {
+    width: 80px;
+    height: 80px;
+  }
+
+  .labName {
+    font-size: 1.2rem;
+  }
+
+  .labDistance {
+    font-size: 0.9rem;
+  }
+
+  .starIcon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .rating {
+    font-size: 0.9rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.8rem;
+  }
+
+  .seeMoreBtn {
+    font-size: 1rem;
+  }
+}
+
+/* Desktop View (1024px and up) */
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1200px;
+    padding: 40px 30px 80px;
+  }
+
+  .greeting {
+    font-size: 3rem;
+  }
+
+  .cardGrid {
+    grid-template-columns: repeat(4, 1fr); /* 4 columns for desktop */
+    gap: 25px;
+  }
+
+  .card {
+    padding: 30px;
+  }
+
+  .iconContainer {
+    padding: 15px;
+  }
+
+  .greenIcon,
+  .purpleIcon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .cardTitle {
+    font-size: 1.5rem;
+  }
+
+  .cardSubtitle {
+    font-size: 1.1rem;
+  }
+
+  .labsGrid {
+    grid-template-columns: repeat(4, 1fr); /* 4 columns for desktop */
+    gap: 25px;
+  }
+
+  .labCard {
+    padding: 25px;
+  }
+
+  .labAvatar {
+    width: 100px;
+    height: 100px;
+  }
+
+  .labName {
+    font-size: 1.4rem;
+  }
+
+  .labDistance {
+    font-size: 1rem;
+  }
+
+  .starIcon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .rating {
+    font-size: 1rem;
+  }
+
+  .sectionTitle {
+    font-size: 2rem;
+  }
+
+  .seeMoreBtn {
+    font-size: 1.1rem;
+  }
+}
+
+/* Mobile Responsiveness (up to 480px) - Already defined, keeping as is */
 @media (max-width: 480px) {
   .container {
     padding: 15px 10px 60px;

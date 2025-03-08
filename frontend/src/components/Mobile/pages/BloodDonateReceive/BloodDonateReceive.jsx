@@ -21,18 +21,18 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // Fix for Leaflet's default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// Custom component to handle map clicks and pin location
+// LocationPicker Component
 const LocationPicker = ({ onLocationSelect, initialLocation }) => {
   const [position, setPosition] = useState(initialLocation || null);
 
@@ -43,7 +43,7 @@ const LocationPicker = ({ onLocationSelect, initialLocation }) => {
     },
   });
 
-  return position === null ? null : (
+  return position && position.lat && position.lng ? (
     <Marker position={position}>
       <Popup>
         Pinned Location: Lat {position.lat}, Lng {position.lng}
@@ -51,10 +51,10 @@ const LocationPicker = ({ onLocationSelect, initialLocation }) => {
         Click "OK" in the popup to confirm.
       </Popup>
     </Marker>
-  );
+  ) : null;
 };
 
-// Function to fetch location details using OpenStreetMap Nominatim API (simplified)
+// Fetch Location Details
 const fetchLocationDetails = async (lat, lng) => {
   try {
     const response = await fetch(
@@ -68,36 +68,36 @@ const fetchLocationDetails = async (lat, lng) => {
   }
 };
 
-// Custom marker for highlighting on hover (now green when highlighted)
+// CustomMarker Component
 const CustomMarker = ({ position, isHighlighted, onClick, children }) => {
   const icon = L.icon({
     iconUrl: isHighlighted
-      ? "https://cdn-icons-png.flaticon.com/512/149/149059.png" // Green pin for highlight (example green pin)
-      : "https://cdn-icons-png.flaticon.com/512/684/684908.png", // Default blue pin
-    iconSize: isHighlighted ? [48, 48] : [38, 38], // Larger on highlight
+      ? "https://cdn-icons-png.flaticon.com/512/149/149059.png"
+      : "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+    iconSize: isHighlighted ? [48, 48] : [38, 38],
     iconAnchor: [19, 38],
     popupAnchor: [0, -38],
   });
 
-  return (
-    <Marker position={position} icon={icon} onClick={onClick}>
+  return position && position.lat && position.lng ? (
+    <Marker position={position} icon={icon} eventHandlers={{ click: onClick }}>
       {children}
     </Marker>
-  );
+  ) : null;
 };
 
+// BloodRequestCard Component
 const BloodRequestCard = ({ request, onHover, onLeave, isHighlighted }) => {
   const bloodGroupColor = {
-    "O+": "#4CAF50", // Green
-    "O-": "#F44336", // Red
-    "A+": "#2196F3", // Blue
-    "A-": "#3F51B5", // Indigo
-    "B+": "#FF9800", // Orange
-    "B-": "#E91E63", // Pink
-    "AB+": "#9C27B0", // Purple
-    "AB-": "#673AB7", // Deep Purple
+    "O+": "#4CAF50",
+    "O-": "#F44336",
+    "A+": "#2196F3",
+    "A-": "#3F51B5",
+    "B+": "#FF9800",
+    "B-": "#E91E63",
+    "AB+": "#9C27B0",
+    "AB-": "#673AB7",
   };
-
   return (
     <div
       className={`${styles.requestCard} ${isHighlighted ? styles.highlighted : ""}`}
@@ -105,22 +105,29 @@ const BloodRequestCard = ({ request, onHover, onLeave, isHighlighted }) => {
       onMouseEnter={() => onHover(request.id)}
       onMouseLeave={onLeave}
     >
-      <h3>{request.hospital}</h3>
+      <h3>{request.patientName}</h3>
       <p>
-        <strong>Blood Group:</strong> {request.bloodGroup} <span style={{ color: bloodGroupColor[request.bloodGroup] || "#757575" }}>●</span>
+        <strong>Blood Group:</strong> {request.bloodGroup}{" "}
+        <span style={{ color: bloodGroupColor[request.bloodGroup] || "#757575" }}>●</span>
       </p>
       <p>
-        <strong>Units Needed:</strong> {request.unitsNeeded}
+        <strong>Quantity:</strong> {request.quantity} ml
       </p>
       <p>
-        <strong>Urgency:</strong> {request.urgency}
+        <strong>Priority:</strong> {request.priority}
       </p>
       <p>
-        <strong>Location:</strong> {request.distance} away
+        <strong>Location:</strong> {request.location}
+      </p>
+      <p>
+        <strong>Contact:</strong> {request.contact}
+      </p>
+      <p>
+        <strong>Status:</strong> {request.status === "Pending" ? "Pending" : "Accessed"}
       </p>
       <button
         className={styles.actionButton}
-        onClick={() => alert(`Contacting ${request.hospital} for ${request.bloodGroup} blood...`)}
+        onClick={() => alert(`Contacting ${request.patientName} for ${request.bloodGroup} blood...`)}
       >
         Help Now
       </button>
@@ -128,144 +135,217 @@ const BloodRequestCard = ({ request, onHover, onLeave, isHighlighted }) => {
   );
 };
 
+// Main Component
 const BloodDonateReceive = () => {
   const navigate = useNavigate();
+  const defaultLocation = { lat: 20.296071, lng: 85.824539 };
 
-  // Dummy user data (replace with real user data from auth/context)
+  // User Data
   const user = {
     name: "John Doe",
-    bloodCoins: 500, // Example BloodCoin balance
-    lastDonationDate: new Date("2024-12-01"), // Last donation date
-    donationsCount: 5, // Number of donations
+    bloodCoins: 500,
+    lastDonationDate: new Date("2024-12-01"),
+    donationsCount: 5,
   };
 
-  // Dummy data for active blood donation requests within 4.3 km
-  const bloodRequests = [
-    {
-      id: 1,
-      location: { lat: 20.296071, lng: 85.824539 }, // Example: Bhubaneswar
-      bloodGroup: "O+",
-      unitsNeeded: 2,
-      hospital: "St. Thomas Hospital",
-      urgency: "Critical",
-      distance: "3.5km",
-    },
-    {
-      id: 2,
-      location: { lat: 20.301071, lng: 85.819539 }, // Example: Nearby Bhubaneswar
-      bloodGroup: "A-",
-      unitsNeeded: 1,
-      hospital: "Royal London Hospital",
-      urgency: "Urgent",
-      distance: "4.2km",
-    },
-    {
-      id: 3,
-      location: { lat: 20.298071, lng: 85.822539 },
-      bloodGroup: "B+",
-      unitsNeeded: 3,
-      hospital: "City Blood Center",
-      urgency: "Normal",
-      distance: "4.0km",
-    },
-  ];
+  // State for API Data
+  const [donors, setDonors] = useState([]);
+  const [bloodRequests, setBloodRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Dummy data for donors (replace with real data from API)
-  const donors = [
-    { id: 1, name: "John Doe", bloodGroup: "O+", phone: "+91 1234567890" },
-    { id: 2, name: "Jane Smith", bloodGroup: "A-", phone: "+91 9876543210" },
-    { id: 3, name: "Mike Johnson", bloodGroup: "B+", phone: "+91 5555555555" },
-  ];
-
-  const [userLocation, setUserLocation] = useState({ lat: 20.296071, lng: 85.824539 }); // Default location for Bhubaneswar, will be updated by GPS
-  const radius = 4300; // 4.3 km in meters
+  // State for Filters and UI
+  const [userLocation, setUserLocation] = useState(defaultLocation);
   const [selectedUrgency, setSelectedUrgency] = useState("All");
   const [selectedBloodGroup, setSelectedBloodGroup] = useState("All");
   const [highlightedRequestId, setHighlightedRequestId] = useState(null);
   const [requestLocation, setRequestLocation] = useState("");
   const [requestLocationDetails, setRequestLocationDetails] = useState("");
-  const [exactLocation, setExactLocation] = useState(""); // New state for exact location
+  const [exactLocation, setExactLocation] = useState("");
   const [pinnedLocation, setPinnedLocation] = useState(null);
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
-  const [receiptFile, setReceiptFile] = useState(null);
 
-  // Fetch current location using GPS on component mount
+  // State for Donation Form
+  const [donateBloodType, setDonateBloodType] = useState("");
+  const [donateQuantity, setDonateQuantity] = useState("");
+  const [donateLocation, setDonateLocation] = useState("");
+  const [donorName, setDonorName] = useState("");
+  const [donorContact, setDonorContact] = useState("");
+
+  // State for Request Form (No receipt file)
+  const [requestBloodType, setRequestBloodType] = useState("");
+  const [requestQuantity, setRequestQuantity] = useState("");
+  const [patientName, setPatientName] = useState("");
+  const [patientContact, setPatientContact] = useState("");
+  const [priority, setPriority] = useState("Normal");
+
+  // Fetch Data and Location
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
-        fetchLocationDetails(latitude, longitude).then((details) => {
-          setRequestLocation(`Lat: ${latitude}, Lng: ${longitude}`);
-          setRequestLocationDetails(details);
-          setExactLocation(details); // Pre-fill exact location
+    const fetchData = async () => {
+      try {
+        // Fetch Donors
+        const donorResponse = await fetch("http://localhost:2000/api/blood/donations", {
+          credentials: "include",
         });
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        alert("Unable to fetch your location. Please pin your location manually.");
+        if (!donorResponse.ok) throw new Error("Failed to fetch donors.");
+        const donorData = await donorResponse.json();
+        setDonors(donorData);
+
+        // Fetch Blood Requests
+        const requestResponse = await fetch("http://localhost:2000/api/blood/request-blood", {
+          credentials: "include",
+        });
+        if (!requestResponse.ok) throw new Error("Failed to fetch requests.");
+        const requestData = await requestResponse.json();
+        setBloodRequests(requestData);
+
+        // Get User Location
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            const newLocation = { lat: latitude, lng: longitude };
+            setUserLocation(newLocation);
+            fetchLocationDetails(latitude, longitude).then((details) => {
+              setRequestLocation(`Lat: ${latitude}, Lng: ${longitude}`);
+              setRequestLocationDetails(details);
+              setExactLocation(details);
+              setDonateLocation(details);
+            });
+          },
+          (error) => {
+            console.error("Error getting location:", error);
+            toast.error("Unable to fetch your location. Using default location.");
+            fetchLocationDetails(defaultLocation.lat, defaultLocation.lng).then((details) => {
+              setRequestLocation(`Lat: ${defaultLocation.lat}, Lng: ${defaultLocation.lng}`);
+              setRequestLocationDetails(details);
+              setExactLocation(details);
+              setDonateLocation(details);
+            });
+          }
+        );
+      } catch (err) {
+        setError(err.message);
+        toast.error(err.message);
+      } finally {
+        setLoading(false);
       }
-    );
+    };
+    fetchData();
   }, []);
 
-  // Filter requests based on urgency and blood group
+  // Filter Requests
   const filteredRequests = bloodRequests.filter((request) => {
-    const matchesUrgency = selectedUrgency === "All" || request.urgency === selectedUrgency;
-    const matchesBloodGroup = selectedBloodGroup === "All" || request.bloodGroup === selectedBloodGroup;
+    const matchesUrgency = selectedUrgency === "All" || request.priority === selectedUrgency;
+    const matchesBloodGroup = selectedBloodGroup === "All" || request.bloodType === selectedBloodGroup;
     return matchesUrgency && matchesBloodGroup;
   });
 
-  // Filter donors based on blood group (for table)
+  // Filter Donors
   const filteredDonors = selectedBloodGroup === "All"
     ? donors
-    : donors.filter(donor => donor.bloodGroup === selectedBloodGroup);
+    : donors.filter((donor) => donor.bloodType === selectedBloodGroup);
 
-  const handleAction = (action) => {
-    console.log(`Performing ${action} action`);
-    navigate(`/${action.toLowerCase().replace(" ", "-")}`);
+  // Handle Blood Donation Submission
+  const handleDonation = async (e) => {
+    e.preventDefault();
+    const donationData = {
+      bloodType: donateBloodType,
+      quantity: donateQuantity,
+      location: donateLocation,
+      name: donorName,
+      contact: donorContact,
+    };
+
+    try {
+      const response = await fetch("http://localhost:2000/api/blood/donate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(donationData),
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to submit donation.");
+      }
+      const result = await response.json();
+      toast.success(result.message || "Thank you for your donation!");
+      const updatedDonors = await fetch("http://localhost:2000/api/blood/donations", {
+        credentials: "include",
+      }).then((res) => res.json());
+      setDonors(updatedDonors);
+      setDonateBloodType("");
+      setDonateQuantity("");
+      setDonateLocation(exactLocation);
+      setDonorName("");
+      setDonorContact("");
+    } catch (err) {
+      console.error("Error during donation:", err);
+      toast.error(err.message);
+    }
   };
 
-  // Handle profile view (simplified for demo)
-  const handleShowProfile = (donor) => {
-    alert(`Full Profile for ${donor.name}:\nName: ${donor.name}\nBlood Group: ${donor.bloodGroup}\nPhone: ${donor.phone}\nLocation: ${donor.location || "Not specified"}`);
+  // Handle Blood Request Submission (No file upload)
+  const handleRequest = async (e) => {
+    e.preventDefault();
+    const requestData = {
+      bloodType: requestBloodType,
+      quantity: requestQuantity,
+      patientName: patientName,
+      location: exactLocation,
+      contact: patientContact,
+      priority: priority,
+    };
+
+    try {
+      const response = await fetch("http://localhost:2000/api/blood/request-blood", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData),
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to submit request.");
+      }
+      const result = await response.json();
+      toast.success(result.message || "Request submitted successfully!");
+      const updatedRequests = await fetch("http://localhost:2000/api/blood/request-blood", {
+        credentials: "include",
+      }).then((res) => res.json());
+      setBloodRequests(updatedRequests);
+      setRequestBloodType("");
+      setRequestQuantity("");
+      setPatientName("");
+      setPatientContact("");
+      setPriority("Normal");
+    } catch (err) {
+      console.error("Error during request:", err);
+      toast.error(err.message);
+    }
   };
 
-  // Determine user badge based on donations
-  const getBadge = (donations) => {
-    if (donations >= 10) return "Super Donor";
-    if (donations >= 5) return "Regular Donor";
-    if (donations >= 1) return "New Donor";
-    return "Potential Donor";
-  };
-
-  // Handle location pinning and auto-fill
+  // Handle Location Pinning
   const handleLocationPin = async (latlng) => {
     setPinnedLocation(latlng);
     const details = await fetchLocationDetails(latlng.lat, latlng.lng);
     setRequestLocation(`Lat: ${latlng.lat}, Lng: ${latlng.lng}`);
     setRequestLocationDetails(details);
-    setExactLocation(details); // Update exact location with geocoded details
+    setExactLocation(details);
+    setDonateLocation(details);
   };
 
   const handleLocationConfirm = () => {
     if (pinnedLocation) {
       setIsLocationPickerOpen(false);
-      setPinnedLocation(null); // Reset after confirmation
+      setPinnedLocation(null);
     }
   };
 
-  // Handle file upload for blood request receipt
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setReceiptFile(file);
-      alert(`File ${file.name} uploaded successfully!`);
-    }
-  };
+  if (loading) return <div className={styles.appContainer}>Loading...</div>;
+  if (error) return <div className={styles.appContainer}>Error: {error}</div>;
 
   return (
     <div className={styles.appContainer}>
-      {/* Fixed Header (Super Stylish Design) */}
       <header className={styles.fixedHeader}>
         <div className={styles.headerContent}>
           <h1 className={styles.appTitle}>Swasthya Setu</h1>
@@ -277,152 +357,100 @@ const BloodDonateReceive = () => {
 
       <div className={styles.stylishContainer}>
         <div className={styles.stylishContent}>
-          {/* Map at the Top with Blood Donation Requests */}
-          <h2 className={styles.sectionTitle}>Nearby Blood Donation Requests (4.3 km)</h2>
+          {/* Map and Requests */}
+          <h2 className={styles.sectionTitle}>Nearby Blood Donation Requests</h2>
           <div className={styles.urgencyFilter}>
-            <button
-              className={`${styles.filterButton} ${selectedUrgency === "All" ? styles.active : ""}`}
-              onClick={() => setSelectedUrgency("All")}
-            >
-              All
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedUrgency === "Critical" ? styles.active : ""}`}
-              onClick={() => setSelectedUrgency("Critical")}
-            >
-              Critical
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedUrgency === "Urgent" ? styles.active : ""}`}
-              onClick={() => setSelectedUrgency("Urgent")}
-            >
-              Urgent
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedUrgency === "Normal" ? styles.active : ""}`}
-              onClick={() => setSelectedUrgency("Normal")}
-            >
-              Normal
-            </button>
+            {["All", "Critical", "High", "Normal"].map((urgency) => (
+              <button
+                key={urgency}
+                className={`${styles.filterButton} ${selectedUrgency === urgency ? styles.active : ""}`}
+                onClick={() => setSelectedUrgency(urgency)}
+              >
+                {urgency}
+              </button>
+            ))}
           </div>
-          <div className={styles.mapContainer}>
-            <MapContainer
-              center={userLocation}
-              zoom={13}
-              zoomControl={false} // Disable default zoom control completely
-              className={styles.stylishMap}
-              style={{ height: "300px", width: "100%", borderRadius: "15px" }}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
-              {/* 4.3 km Radius Circle with Stylish Effect */}
-              <Circle
+          {userLocation.lat && userLocation.lng && (
+            <div className={styles.mapContainer}>
+              <MapContainer
                 center={userLocation}
-                radius={radius}
-                pathOptions={{
-                  color: "#d4a017",
-                  fillColor: "#f5e7bc",
-                  fillOpacity: 0.5,
-                  weight: 3,
-                  dashArray: "5, 5",
-                }}
-              />
-              {/* Markers for Filtered Blood Requests */}
-              {filteredRequests.map((request) => (
-                <CustomMarker
-                  key={request.id}
-                  position={request.location}
-                  isHighlighted={highlightedRequestId === request.id}
-                  onClick={() => setHighlightedRequestId(request.id)}
-                >
-                  <Popup className={styles.stylishPopup}>
-                    <strong>{request.hospital}</strong>
-                    <br />
-                    Blood Group: {request.bloodGroup}
-                    <br />
-                    Units Needed: {request.unitsNeeded}
-                    <br />
-                    Urgency: {request.urgency}
-                    <br />
-                    Distance: {request.distance}
-                  </Popup>
-                </CustomMarker>
-              ))}
-            </MapContainer>
-          </div>
+                zoom={13}
+                zoomControl={false}
+                className={styles.stylishMap}
+                style={{ height: "300px", width: "100%", borderRadius: "15px" }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                <Circle
+                  center={userLocation}
+                  radius={4300}
+                  pathOptions={{
+                    color: "#d4a017",
+                    fillColor: "#f5e7bc",
+                    fillOpacity: 0.5,
+                    weight: 3,
+                    dashArray: "5, 5",
+                  }}
+                />
+                {filteredRequests.map((request) => (
+                  <CustomMarker
+                    key={request._id}
+                    position={request.location && typeof request.location === "object" ? request.location : userLocation}
+                    isHighlighted={highlightedRequestId === request._id}
+                    onClick={() => setHighlightedRequestId(request._id)}
+                  >
+                    <Popup>
+                      <strong>{request.patientName}</strong>
+                      <br />
+                      Blood Group: {request.bloodType}
+                      <br />
+                      Quantity: {request.quantity} ml
+                      <br />
+                      Priority: {request.priority}
+                      <br />
+                      Status: {request.status}
+                    </Popup>
+                  </CustomMarker>
+                ))}
+              </MapContainer>
+            </div>
+          )}
 
-          {/* Blood Request Cards Below Map (Super Stylish) */}
           <div className={styles.requestList}>
             {filteredRequests.map((request) => (
               <BloodRequestCard
-                key={request.id}
-                request={request}
-                onHover={() => setHighlightedRequestId(request.id)}
+                key={request._id}
+                request={{
+                  id: request._id,
+                  patientName: request.patientName,
+                  bloodGroup: request.bloodType,
+                  quantity: request.quantity,
+                  priority: request.priority,
+                  location: request.location,
+                  contact: request.contact,
+                  status: request.status,
+                }}
+                onHover={() => setHighlightedRequestId(request._id)}
                 onLeave={() => setHighlightedRequestId(null)}
-                isHighlighted={highlightedRequestId === request.id}
+                isHighlighted={highlightedRequestId === request._id}
               />
             ))}
           </div>
 
-          {/* Donor Section with Blood Group Filter Above Table */}
+          {/* Donors Section */}
           <h2 className={styles.sectionTitle}>Available Donors</h2>
           <div className={styles.bloodGroupFilter}>
-            <button
-              className={`${styles.filterButton} ${selectedBloodGroup === "All" ? styles.active : ""}`}
-              onClick={() => setSelectedBloodGroup("All")}
-            >
-              All Blood Groups
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedBloodGroup === "O+" ? styles.active : ""}`}
-              onClick={() => setSelectedBloodGroup("O+")}
-            >
-              O+
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedBloodGroup === "O-" ? styles.active : ""}`}
-              onClick={() => setSelectedBloodGroup("O-")}
-            >
-              O-
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedBloodGroup === "A+" ? styles.active : ""}`}
-              onClick={() => setSelectedBloodGroup("A+")}
-            >
-              A+
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedBloodGroup === "A-" ? styles.active : ""}`}
-              onClick={() => setSelectedBloodGroup("A-")}
-            >
-              A-
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedBloodGroup === "B+" ? styles.active : ""}`}
-              onClick={() => setSelectedBloodGroup("B+")}
-            >
-              B+
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedBloodGroup === "B-" ? styles.active : ""}`}
-              onClick={() => setSelectedBloodGroup("B-")}
-            >
-              B-
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedBloodGroup === "AB+" ? styles.active : ""}`}
-              onClick={() => setSelectedBloodGroup("AB+")}
-            >
-              AB+
-            </button>
-            <button
-              className={`${styles.filterButton} ${selectedBloodGroup === "AB-" ? styles.active : ""}`}
-              onClick={() => setSelectedBloodGroup("AB-")}
-            >
-              AB-
-            </button>
+            {["All", "O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((bg) => (
+              <button
+                key={bg}
+                className={`${styles.filterButton} ${selectedBloodGroup === bg ? styles.active : ""}`}
+                onClick={() => setSelectedBloodGroup(bg)}
+              >
+                {bg}
+              </button>
+            ))}
           </div>
           <div className={styles.donorTableContainer}>
             <table className={styles.stylishDonorTable}>
@@ -430,231 +458,193 @@ const BloodDonateReceive = () => {
                 <tr>
                   <th>Name</th>
                   <th>Blood Group</th>
-                  <th>Number</th>
-                  <th>Action</th>
+                  <th>Contact</th>
+                  <th>Location</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredDonors.map((donor) => (
-                  <tr key={donor.id} className={styles.stylishTableRow}>
+                  <tr key={donor._id}>
                     <td>{donor.name}</td>
-                    <td>{donor.bloodGroup}</td>
-                    <td>{donor.phone}</td>
-                    <td>
-                      <button
-                        className={styles.actionButton}
-                        onClick={() => handleShowProfile(donor)}
-                      >
-                        Show Full Profile
-                      </button>
-                    </td>
+                    <td>{donor.bloodType}</td>
+                    <td>{donor.contact}</td>
+                    <td>{donor.location}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Receive Blood Section (Super Stylish) */}
+          {/* Donate Blood Section */}
+          <h2 className={styles.sectionTitle}>Donate Blood</h2>
+          <form onSubmit={handleDonation} className={styles.stylishInputGrid}>
+            <InputField
+              icon={<PersonIcon />}
+              label="Donor Name"
+              value={donorName}
+              onChange={(e) => setDonorName(e.target.value)}
+              placeholder="Enter your name"
+            />
+            <div className={styles.inputField}>
+              <div className={styles.inputIcon}><BloodIcon /></div>
+              <select
+                className={styles.selectInput}
+                value={donateBloodType}
+                onChange={(e) => setDonateBloodType(e.target.value)}
+                required
+              >
+                <option value="">Select Blood Type</option>
+                {["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            <InputField
+              icon={<BloodIcon />}
+              label="Quantity (ml)"
+              value={donateQuantity}
+              onChange={(e) => setDonateQuantity(e.target.value)}
+              placeholder="e.g., 450"
+            />
+            <div className={styles.locationField}>
+              <div className={styles.inputIcon}><LocationIcon /></div>
+              <input
+                type="text"
+                value={donateLocation}
+                onChange={(e) => setDonateLocation(e.target.value)}
+                className={styles.input}
+                placeholder="Enter donation location"
+              />
+              <button type="button" className={styles.pinButton} onClick={() => setIsLocationPickerOpen(true)}>Pin Location</button>
+            </div>
+            <InputField
+              icon={<PhoneIcon />}
+              label="Contact"
+              value={donorContact}
+              onChange={(e) => setDonorContact(e.target.value)}
+              placeholder="Enter contact info"
+            />
+            <button type="submit" className={styles.actionButton}>
+              <BloodIcon className={styles.buttonIcon} /> Donate Blood
+            </button>
+          </form>
+
+          {/* Request Blood Section (No file upload) */}
           <h2 className={styles.sectionTitle}>Request Blood</h2>
-          <div className={styles.stylishInputGrid}>
+          <form onSubmit={handleRequest} className={styles.stylishInputGrid}>
             <InputField
               icon={<PersonIcon />}
               label="Patient Name"
+              value={patientName}
+              onChange={(e) => setPatientName(e.target.value)}
               placeholder="Enter patient name"
-              onChange={(e) => console.log(e.target.value)}
             />
             <div className={styles.inputField}>
-              <div className={styles.inputIcon}>
-                <BloodIcon />
-              </div>
+              <div className={styles.inputIcon}><BloodIcon /></div>
               <select
                 className={styles.selectInput}
-                value={selectedBloodGroup}
-                onChange={(e) => console.log(e.target.value)}
+                value={requestBloodType}
+                onChange={(e) => setRequestBloodType(e.target.value)}
+                required
               >
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
+                <option value="">Select Blood Type</option>
+                {["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
               </select>
             </div>
             <div className={styles.locationField}>
-              <div className={styles.inputIcon}>
-                <LocationIcon />
-              </div>
+              <div className={styles.inputIcon}><LocationIcon /></div>
               <input
                 type="text"
-                placeholder="Enter or pin hospital location"
                 value={requestLocation}
                 onChange={(e) => setRequestLocation(e.target.value)}
                 className={styles.input}
+                placeholder="Pin hospital location"
                 readOnly
               />
-              <button
-                className={styles.pinButton}
-                onClick={() => setIsLocationPickerOpen("request")}
-              >
-                Pin Location
-              </button>
+              <button type="button" className={styles.pinButton} onClick={() => setIsLocationPickerOpen(true)}>Pin Location</button>
             </div>
-            <InputField
-              icon={<LocationIcon />}
-              label="Location Details"
-              value={requestLocationDetails}
-              placeholder="Detailed address will appear here"
-              readOnly
-            />
             <InputField
               icon={<LocationIcon />}
               label="Exact Location"
               value={exactLocation}
-              placeholder="Enter exact address or landmark"
               onChange={(e) => setExactLocation(e.target.value)}
+              placeholder="Enter exact address"
             />
             <InputField
-              icon={<UrgencyIcon />}
-              label="Urgency Level"
-              placeholder="e.g., Critical, Urgent, Normal"
-              onChange={(e) => console.log(e.target.value)}
+              icon={<PhoneIcon />}
+              label="Contact"
+              value={patientContact}
+              onChange={(e) => setPatientContact(e.target.value)}
+              placeholder="Enter contact info"
             />
             <InputField
               icon={<BloodIcon />}
-              label="Required Units"
-              placeholder="e.g., 1 Unit (~450ml)"
-              onChange={(e) => console.log(e.target.value)}
+              label="Quantity (ml)"
+              value={requestQuantity}
+              onChange={(e) => setRequestQuantity(e.target.value)}
+              placeholder="e.g., 450"
             />
             <div className={styles.inputField}>
-              <div className={styles.inputIcon}>
-                <PersonIcon />
-              </div>
-              <label className={styles.fileLabel}>
-                Upload Hospital Receipt
-                <input
-                  type="file"
-                  onChange={handleFileUpload}
-                  className={styles.fileInput}
-                  accept="image/*,application/pdf"
-                />
-              </label>
+              <div className={styles.inputIcon}><UrgencyIcon /></div>
+              <select className={styles.selectInput} value={priority} onChange={(e) => setPriority(e.target.value)}>
+                <option value="Normal">Normal</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
             </div>
-            <button
-              className={styles.actionButton}
-              onClick={() => handleAction("Request Blood")}
-            >
-              <RequestIcon className={styles.buttonIcon} />
-              Request Blood
+            <button type="submit" className={styles.actionButton}>
+              <RequestIcon className={styles.buttonIcon} /> Request Blood
             </button>
-          </div>
+          </form>
 
-          {/* Search Available Blood Section (Super Stylish) */}
-          <h2 className={styles.sectionTitle}>Search Blood Availability</h2>
-          <button
-            className={`${styles.actionButton} ${styles.searchButton}`}
-            onClick={() => handleAction("Search Available Blood")}
-          >
-            <SearchIcon className={styles.buttonIcon} />
-            Search Available Blood
-          </button>
-
-          {/* Customized Rewards & Benefits Section (Classic Look) */}
-          <h2 className={styles.sectionTitle}>Rewards & Benefits</h2>
-          <div className={styles.rewardsSection}>
-            <div className={styles.rewardsBadge}>
-              <span className={styles.badgeText}>You have</span>
-              <span className={styles.bloodCoins}>500 BloodCoins</span>
-              <span className={styles.badgeText}>Earn 100 BloodCoins per donation!</span>
-            </div>
-            <p className={styles.rewardsDescription}>
-              Redeem for discounts on medicines, doctor consultations, or health services.
-            </p>
-            <div className={styles.badgeContainer}>
-              <span className={styles.badge}>Current Badge:</span>
-              <span className={styles.badgeValue}>Regular Donor</span>
-            </div>
-            <button
-              className={`${styles.actionButton} ${styles.redeemButton}`}
-              onClick={() => navigate("/redeem-rewards")}
-            >
-              Redeem Rewards
-            </button>
-          </div>
-
-          {/* Emergency Donor Mode Toggle (Super Stylish) */}
-          <h2 className={styles.sectionTitle}>Emergency Volunteering</h2>
-          <button
-            className={styles.actionButton}
-            onClick={() =>
-              alert(
-                "Emergency Donor Mode Enabled! You'll receive urgent blood need notifications."
-              )
-            }
-          >
-            <NotificationIcon className={styles.buttonIcon} />
-            Enable Emergency Donor Mode
-          </button>
-
-          {/* Location Picker Popup (Super Stylish) */}
-          {isLocationPickerOpen && (
+          {/* Location Picker Modal */}
+          {isLocationPickerOpen && userLocation.lat && userLocation.lng && (
             <div className={styles.modalOverlay}>
               <div className={styles.stylishModalContent}>
                 <h3 className={styles.modalTitle}>Pin Your Location</h3>
                 <MapContainer
                   center={userLocation}
                   zoom={13}
-                  zoomControl={false} // Disable default zoom control completely
-                  className={styles.stylishMap}
+                  zoomControl={false}
                   style={{ height: "300px", width: "100%", borderRadius: "15px" }}
                 >
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   />
-                  <LocationPicker
-                    onLocationSelect={handleLocationPin}
-                    initialLocation={userLocation}
-                  />
+                  <LocationPicker onLocationSelect={handleLocationPin} initialLocation={userLocation} />
                 </MapContainer>
                 <div className={styles.modalButtons}>
-                  <button
-                    className={styles.actionButton}
-                    onClick={handleLocationConfirm}
-                  >
-                    OK
-                  </button>
-                  <button
-                    className={styles.cancelButton}
-                    onClick={() => setIsLocationPickerOpen(false)}
-                  >
-                    Cancel
-                  </button>
+                  <button className={styles.actionButton} onClick={handleLocationConfirm}>OK</button>
+                  <button className={styles.cancelButton} onClick={() => setIsLocationPickerOpen(false)}>Cancel</button>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Toast Notifications */}
+          <ToastContainer />
         </div>
       </div>
     </div>
   );
 };
 
-const InputField = ({ icon, label, value, placeholder, readOnly, onChange }) => {
-  return (
-    <div className={styles.inputField}>
-      <div className={styles.inputIcon}>{icon}</div>
-      <input
-        type="text"
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        className={styles.input}
-        readOnly={readOnly}
-      />
-    </div>
-  );
-};
+// InputField Component
+const InputField = ({ icon, label, value, placeholder, readOnly, onChange }) => (
+  <div className={styles.inputField}>
+    <div className={styles.inputIcon}>{icon}</div>
+    <input
+      type="text"
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      className={styles.input}
+      readOnly={readOnly}
+    />
+  </div>
+);
 
 export default BloodDonateReceive;
