@@ -1,80 +1,187 @@
 import React, { useEffect, useRef, useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {
-    FaComment,
-    FaMicrophone,
-    FaMicrophoneSlash,
-    FaPhone,
-    FaPhoneSlash,
-    FaTimes,
-    FaVideo,
-    FaVideoSlash
-} from 'react-icons/fa';
+import { FaPhoneSlash } from 'react-icons/fa';
 
 const VideoCall = () => {
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
     const [isCallActive, setIsCallActive] = useState(false);
-    const [micMuted, setMicMuted] = useState(false);
-    const [videoOn, setVideoOn] = useState(true);
-    const [isChatOpen, setIsChatOpen] = useState(false);
     const [stream, setStream] = useState(null);
     const [error, setError] = useState(null);
     const pcRef = useRef(null);
     const droneRef = useRef(null);
+    const [isDroneConnected, setIsDroneConnected] = useState(false);
+    const pendingMembersRef = useRef(null);
+    const hasStartedWebRTC = useRef(false);
 
     if (!window.location.hash) {
         window.location.hash = Math.floor(Math.random() * 0xFFFFFF).toString(16);
     }
     const roomHash = window.location.hash.substring(1);
 
-    useEffect(() => {
-        if (!window.ScaleDrone) {
-            setError('ScaleDrone library not loaded');
+    const onError = (error) => {
+        console.error('Error:', error);
+        setError(`Error: ${error.message || error.toString() || 'Unknown error'}`);
+    };
+
+    const sendMessage = (message) => {
+        if (droneRef.current && droneRef.current.state === 'open') {
+            console.log('Sending message:', message);
+            droneRef.current.publish({
+                room: 'observable-' + roomHash,
+                message
+            });
+        } else {
+            console.warn('Cannot send message: Drone connection not open');
+            setError('Failed to send signaling data: ScaleDrone connection not available');
+        }
+    };
+
+    const startWebRTC = (isOfferer) => {
+        if (hasStartedWebRTC.current) {
+            console.log('WebRTC already started, skipping');
+            return;
+        }
+        if (pcRef.current) {
+            console.log('Peer connection already exists, skipping WebRTC start');
             return;
         }
 
-        const drone = new window.ScaleDrone('yiS12Ts5RdNhebyM'); // Replace with your valid channel ID
-        droneRef.current = drone;
-        const roomName = 'observable-' + roomHash;
-        const configuration = {
-            iceServers: [{
-                urls: 'stun:stun.l.google.com:19302'
-            }]
+        console.log('Starting WebRTC, isOfferer:', isOfferer);
+        pcRef.current = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+            ]
+        });
+        hasStartedWebRTC.current = true;
+        setIsCallActive(true);
+
+        pcRef.current.onicecandidate = event => {
+            if (event.candidate) {
+                console.log('ICE candidate generated:', event.candidate);
+                sendMessage({ candidate: event.candidate });
+            }
         };
 
-        const onError = (error) => {
-            console.error('WebRTC Error:', error);
-            const errorMessage = error?.message || error?.toString() || 'Unknown error';
-            setError(`Error: ${errorMessage}`);
+        pcRef.current.ontrack = event => {
+            console.log('Remote track received:', event.streams);
+            const remoteStream = event.streams[0];
+            if (remoteVideoRef.current && (!remoteVideoRef.current.srcObject || remoteVideoRef.current.srcObject.id !== remoteStream.id)) {
+                remoteVideoRef.current.srcObject = remoteStream;
+                remoteVideoRef.current.play()
+                    .then(() => console.log('Remote video playing'))
+                    .catch(e => console.error('Error playing remote video:', e));
+            }
         };
+
+        pcRef.current.oniceconnectionstatechange = () => {
+            console.log('ICE connection state:', pcRef.current.iceConnectionState);
+            if (pcRef.current.iceConnectionState === 'disconnected') {
+                setIsCallActive(false);
+                setError('Peer disconnected');
+            } else if (pcRef.current.iceConnectionState === 'failed') {
+                setError('ICE connection failed');
+            } else if (pcRef.current.iceConnectionState === 'connected' || pcRef.current.iceConnectionState === 'completed') {
+                console.log('Peers successfully connected');
+            }
+        };
+
+        navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: true,
+        }).then(mediaStream => {
+            console.log('Local stream obtained:', mediaStream);
+            setStream(mediaStream);
+            if (localVideoRef.current) {
+                localVideoRef.current.srcObject = mediaStream;
+                localVideoRef.current.play()
+                    .then(() => console.log('Local video playing'))
+                    .catch(e => console.error('Error playing local video:', e));
+            }
+            mediaStream.getTracks().forEach(track => {
+                if (pcRef.current) {
+                    console.log('Adding track to peer connection:', track.kind);
+                    pcRef.current.addTrack(track, mediaStream);
+                }
+            });
+
+            if (isOfferer && pcRef.current) {
+                console.log('Creating offer');
+                pcRef.current.createOffer()
+                    .then(localDescCreated)
+                    .catch(onError);
+            }
+        }).catch(onError);
+    };
+
+    const localDescCreated = (desc) => {
+        if (pcRef.current) {
+            console.log('Setting local description:', desc.type);
+            pcRef.current.setLocalDescription(desc)
+                .then(() => {
+                    console.log('Local description set, sending SDP');
+                    sendMessage({ sdp: pcRef.current.localDescription });
+                })
+                .catch(onError);
+        } else {
+            console.error('Cannot set local description: Peer connection is null');
+            setError('Failed to create offer: Peer connection unavailable');
+        }
+    };
+
+    useEffect(() => {
+        if (!window.ScaleDrone) {
+            setError('ScaleDrone library not loaded. Please include <script src="https://cdn.scaledrone.com/scaledrone.min.js"></script> in your HTML.');
+            return;
+        }
+
+        const drone = new window.ScaleDrone('QUjOzOu5cuV97r5H');
+        droneRef.current = drone;
+        const roomName = 'observable-' + roomHash;
 
         drone.on('open', (error) => {
             if (error) {
                 onError(error);
                 return;
             }
-            console.log('ScaleDrone connection established');
+            console.log('Successfully connected to ScaleDrone');
+            setIsDroneConnected(true);
             const room = drone.subscribe(roomName);
             room.on('open', (error) => {
                 if (error) onError(error);
                 else console.log('Subscribed to room:', roomName);
             });
-            
+
             room.on('members', members => {
-                console.log('Members in room:', members.length);
-                const isOfferer = members.length === 2;
-                startWebRTC(isOfferer);
+                console.log('Members in room:', members);
+                if (members.length > 2 && !hasStartedWebRTC.current) {
+                    console.warn('Room has more than 2 members, rejecting new connection');
+                    setError('Room is full; only two participants allowed');
+                    if (droneRef.current && droneRef.current.state === 'open') {
+                        droneRef.current.close(); // Close connection for excess members
+                    }
+                    return;
+                }
+
+                if (!isDroneConnected) {
+                    console.log('Drone not yet connected, queuing members');
+                    pendingMembersRef.current = members.slice(0, 2);
+                } else {
+                    const limitedMembers = members.slice(0, 2);
+                    const isOfferer = limitedMembers.length === 2;
+                    startWebRTC(isOfferer);
+                }
             });
 
             room.on('data', (message, client) => {
                 if (!pcRef.current || client.id === drone.clientId) return;
-                console.log('Received data:', message);
+                console.log('Received signaling data:', message);
 
                 if (message.sdp) {
-                    console.log('Processing SDP:', message.sdp.type);
                     pcRef.current.setRemoteDescription(new RTCSessionDescription(message.sdp))
                         .then(() => {
+                            console.log('Set remote description:', message.sdp.type);
                             if (message.sdp.type === 'offer') {
                                 console.log('Creating answer');
                                 pcRef.current.createAnswer()
@@ -84,95 +191,42 @@ const VideoCall = () => {
                         })
                         .catch(onError);
                 } else if (message.candidate) {
-                    console.log('Adding ICE candidate');
+                    console.log('Adding ICE candidate:', message.candidate);
                     pcRef.current.addIceCandidate(new RTCIceCandidate(message.candidate))
-                        .catch(onError);
+                        .catch(e => console.error('Error adding ICE candidate:', e));
                 }
             });
         });
 
-        drone.on('error', (error) => onError(error));
-        drone.on('close', () => {
-            console.log('ScaleDrone connection closed');
-            setIsCallActive(false);
-            setError('Connection to server closed');
+        drone.on('error', (error) => {
+            onError(error);
+            setIsDroneConnected(false);
         });
 
-        const sendMessage = (message) => {
+        drone.on('close', (event) => {
+            console.log('ScaleDrone connection closed:', event);
+            setIsDroneConnected(false);
+            setIsCallActive(false);
+            setError('ScaleDrone connection closed unexpectedly');
+        });
+
+        if (isDroneConnected && pendingMembersRef.current) {
+            const members = pendingMembersRef.current;
+            const isOfferer = members.length === 2;
+            startWebRTC(isOfferer);
+            pendingMembersRef.current = null;
+        }
+
+        // Cleanup on unmount or window close
+        const handleBeforeUnload = () => {
             if (droneRef.current && droneRef.current.state === 'open') {
-                console.log('Sending message:', message);
-                droneRef.current.publish({
-                    room: roomName,
-                    message
-                });
-            } else {
-                console.warn('Cannot send message: Drone connection not open');
+                droneRef.current.close();
             }
         };
-
-        const startWebRTC = (isOfferer) => {
-            console.log('Starting WebRTC, isOfferer:', isOfferer);
-            pcRef.current = new RTCPeerConnection(configuration);
-            setIsCallActive(true);
-
-            pcRef.current.onicecandidate = event => {
-                if (event.candidate) {
-                    sendMessage({'candidate': event.candidate});
-                }
-            };
-
-            pcRef.current.ontrack = event => {
-                console.log('Remote track received:', event.streams);
-                const remoteStream = event.streams[0];
-                if (remoteVideoRef.current) {
-                    remoteVideoRef.current.srcObject = remoteStream;
-                    remoteVideoRef.current.play().catch(e => console.error('Remote video play error:', e));
-                }
-            };
-
-            pcRef.current.oniceconnectionstatechange = () => {
-                console.log('ICE connection state:', pcRef.current.iceConnectionState);
-                if (pcRef.current.iceConnectionState === 'disconnected') {
-                    setIsCallActive(false);
-                }
-            };
-
-            navigator.mediaDevices.getUserMedia({
-                audio: true,
-                video: true,
-            }).then(mediaStream => {
-                console.log('Local stream obtained');
-                setStream(mediaStream);
-                if (localVideoRef.current) {
-                    localVideoRef.current.srcObject = mediaStream;
-                    localVideoRef.current.play().catch(e => console.error('Local video play error:', e));
-                }
-                mediaStream.getTracks().forEach(track => {
-                    if (pcRef.current) {
-                        console.log('Adding track:', track.kind);
-                        pcRef.current.addTrack(track, mediaStream);
-                    }
-                });
-
-                if (isOfferer) {
-                    console.log('Creating offer');
-                    pcRef.current.createOffer()
-                        .then(localDescCreated)
-                        .catch(onError);
-                }
-            }).catch(onError);
-        };
-
-        const localDescCreated = (desc) => {
-            if (pcRef.current) {
-                console.log('Setting local description:', desc.type);
-                pcRef.current.setLocalDescription(desc)
-                    .then(() => sendMessage({'sdp': pcRef.current.localDescription}))
-                    .catch(onError);
-            }
-        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
 
         return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
             if (pcRef.current) {
                 pcRef.current.close();
                 pcRef.current = null;
@@ -183,20 +237,11 @@ const VideoCall = () => {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
+            setIsDroneConnected(false);
+            hasStartedWebRTC.current = false;
             droneRef.current = null;
         };
-    }, [roomHash]);
-
-    useEffect(() => {
-        if (stream) {
-            stream.getAudioTracks().forEach(track => {
-                track.enabled = !micMuted;
-            });
-            stream.getVideoTracks().forEach(track => {
-                track.enabled = videoOn;
-            });
-        }
-    }, [micMuted, videoOn, stream]);
+    }, [roomHash, isDroneConnected]);
 
     const handleCallToggle = () => {
         if (isCallActive) {
@@ -218,6 +263,8 @@ const VideoCall = () => {
                 remoteVideoRef.current.srcObject = null;
             }
             setIsCallActive(false);
+            setIsDroneConnected(false);
+            hasStartedWebRTC.current = false;
         }
     };
 
@@ -241,10 +288,10 @@ const VideoCall = () => {
                 </div>
                 <div className="rounded-3 shadow bg-dark position-relative p-3 d-flex align-items-center justify-content-center" style={{ width: '300px' }}>
                     <span className="badge bg-success position-absolute top-0 start-0 m-3">You</span>
-                    {videoOn && stream ? (
+                    {stream ? (
                         <video ref={localVideoRef} autoPlay playsInline muted className="w-100 rounded" />
                     ) : (
-                        <div className="text-light">Camera Off</div>
+                        <div className="text-light">Camera Loading...</div>
                     )}
                 </div>
             </div>
@@ -253,51 +300,16 @@ const VideoCall = () => {
                 <div className="alert alert-danger text-center m-3">{error}</div>
             )}
 
-            <div className="bg-white shadow p-3 d-flex flex-wrap justify-content-center gap-3">
-                <button 
-                    className={`btn btn-${micMuted ? 'danger' : 'outline-primary'} rounded-circle p-3`}
-                    onClick={() => setMicMuted(!micMuted)}
-                >
-                    {micMuted ? <FaMicrophoneSlash size={24} /> : <FaMicrophone size={24} />}
-                </button>
-                <button 
-                    className={`btn btn-${videoOn ? 'outline-primary' : 'danger'} rounded-circle p-3`}
-                    onClick={() => setVideoOn(!videoOn)}
-                >
-                    {videoOn ? <FaVideo size={24} /> : <FaVideoSlash size={24} />}
-                </button>
-                <button 
-                    className={`btn btn-${isCallActive ? 'danger' : 'success'} rounded-circle p-3`}
-                    onClick={handleCallToggle}
-                >
-                    {isCallActive ? <FaPhoneSlash size={24} /> : <FaPhone size={24} />}
-                </button>
-                <button 
-                    className={`btn btn-${isChatOpen ? 'primary' : 'outline-primary'} rounded-circle p-3`}
-                    onClick={() => setIsChatOpen(!isChatOpen)}
-                >
-                    <FaComment size={24} />
-                </button>
+            <div className="bg-white shadow p-3 d-flex justify-content-center">
+                {isCallActive && (
+                    <button 
+                        className="btn btn-danger rounded-circle p-3"
+                        onClick={handleCallToggle}
+                    >
+                        <FaPhoneSlash size={24} />
+                    </button>
+                )}
             </div>
-
-            {isChatOpen && (
-                <div className="position-fixed bottom-0 end-0 m-3 bg-white shadow rounded border p-3" style={{ width: '350px', height: '400px' }}>
-                    <div className="d-flex justify-content-between border-bottom pb-2">
-                        <h6>Chat</h6>
-                        <button 
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => setIsChatOpen(false)}
-                        >
-                            <FaTimes />
-                        </button>
-                    </div>
-                    <div className="p-3 overflow-auto flex-grow-1">No messages yet</div>
-                    <div className="p-2 border-top d-flex">
-                        <input type="text" className="form-control" placeholder="Type a message..." />
-                        <button className="btn btn-primary ms-2">Send</button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
