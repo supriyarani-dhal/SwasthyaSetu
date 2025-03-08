@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Select from "react-select";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -26,9 +26,9 @@ L.Icon.Default.mergeOptions({
 // Custom marker with alert type styling
 const CustomMarker = ({ position, alertType, children }) => {
   const alertColors = {
-    Critical: "#F44336", // Red
-    Urgent: "#FF9800", // Orange
-    Normal: "#4CAF50", // Green
+    Critical: "#F44336",
+    Urgent: "#FF9800",
+    Normal: "#4CAF50",
   };
 
   const dotIcon = L.divIcon({
@@ -41,29 +41,36 @@ const CustomMarker = ({ position, alertType, children }) => {
     popupAnchor: [0, -6],
   });
 
-  return (
-    <Marker position={position} icon={dotIcon}>
-      {children}
-    </Marker>
-  );
+  return <Marker position={position} icon={dotIcon}>{children}</Marker>;
 };
 
-// Enhanced PortalSelect component
+// Enhanced PortalSelect component with proper value handling
 const PortalSelect = ({ options, value, onChange, placeholder, className }) => {
+  // Ensure value matches an option object from the options array
+  const selectedValue = options.find((opt) => opt.value === value) || null;
+
+  // Handle the onChange event to pass the raw value to the parent
+  const handleChange = useCallback((selectedOption) => {
+    const newValue = selectedOption ? selectedOption.value : "";
+    console.log(`PortalSelect onChange - Selected Value: ${newValue}`); // Debug log
+    onChange(newValue);
+  }, [onChange]);
+
   return (
     <Select
       options={options}
-      value={options.find((opt) => opt.value === value) || null}
-      onChange={onChange}
+      value={selectedValue}
+      onChange={handleChange}
       placeholder={placeholder}
       className={className}
       menuPosition="fixed"
       menuPortalTarget={document.body}
+      menuShouldScrollIntoView={true}
+      onMenuOpen={() => console.log("Menu opened")} // Debug log
       styles={{
         menu: (base) => ({
           ...base,
-          zIndex: 9999,
-          position: "fixed",
+          zIndex: 10000,
           width: "100%",
           maxWidth: "480px",
           borderRadius: "8px",
@@ -78,8 +85,14 @@ const PortalSelect = ({ options, value, onChange, placeholder, className }) => {
           background: "transparent",
           minHeight: "40px",
         }),
-        option: (base) => ({ ...base, color: "#5c4033" }),
+        option: (base) => ({
+          ...base,
+          color: "#5c4033",
+          backgroundColor: "white",
+          "&:hover": { backgroundColor: "#f4c430", color: "white" },
+        }),
         singleValue: (base) => ({ ...base, color: "#5c4033" }),
+        menuPortal: (base) => ({ ...base, zIndex: 10000 }),
       }}
     />
   );
@@ -96,9 +109,7 @@ const LocationPicker = ({ onLocationSelect, initialLocation }) => {
   });
   return position ? (
     <Marker position={position}>
-      <Popup>
-        Pinned: Lat {position.lat.toFixed(4)}, Lng {position.lng.toFixed(4)}
-      </Popup>
+      <Popup>Pinned: Lat {position.lat.toFixed(4)}, Lng {position.lng.toFixed(4)}</Popup>
     </Marker>
   ) : null;
 };
@@ -132,13 +143,13 @@ const fetchLocationDetails = async (lat, lng) => {
       displayName: data.display_name || `Lat: ${lat}, Lng: ${lng}`,
       lat,
       lng,
-      city: data.address?.city || data.address?.town || '',
-      state: data.address?.state || '',
-      district: data.address?.county || '',
+      city: data.address?.city || data.address?.town || "",
+      state: data.address?.state || "",
+      district: data.address?.county || "",
     };
   } catch (error) {
     console.error("Error fetching location details:", error);
-    return { displayName: `Lat: ${lat}, Lng: ${lng}`, lat, lng, city: '', state: '', district: '' };
+    return { displayName: `Lat: ${lat}, Lng: ${lng}`, lat, lng, city: "", state: "", district: "" };
   }
 };
 
@@ -210,20 +221,73 @@ const AccidentAlert = () => {
   const [isEmergencyAlertEnabled, setIsEmergencyAlertEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Odisha districts
+  // Odisha districts (all districts)
   const odishaDistricts = [
     { value: "Angul", label: "Angul" },
+    { value: "Balasore", label: "Balasore" },
+    { value: "Bargarh", label: "Bargarh" },
+    { value: "Bhadrak", label: "Bhadrak" },
+    { value: "Bolangir", label: "Bolangir" },
+    { value: "Boudh", label: "Boudh" },
     { value: "Cuttack", label: "Cuttack" },
+    { value: "Deogarh", label: "Deogarh" },
+    { value: "Dhenkanal", label: "Dhenkanal" },
+    { value: "Gajapati", label: "Gajapati" },
+    { value: "Ganjam", label: "Ganjam" },
+    { value: "Jagatsinghpur", label: "Jagatsinghpur" },
+    { value: "Jajpur", label: "Jajpur" },
+    { value: "Jharsuguda", label: "Jharsuguda" },
+    { value: "Kalahandi", label: "Kalahandi" },
+    { value: "Kandhamal", label: "Kandhamal" },
+    { value: "Kendrapara", label: "Kendrapara" },
+    { value: "Keonjhar", label: "Keonjhar" },
     { value: "Khordha", label: "Khordha" },
+    { value: "Koraput", label: "Koraput" },
+    { value: "Malkangiri", label: "Malkangiri" },
+    { value: "Mayurbhanj", label: "Mayurbhanj" },
+    { value: "Nabarangpur", label: "Nabarangpur" },
+    { value: "Nayagarh", label: "Nayagarh" },
+    { value: "Nuapada", label: "Nuapada" },
     { value: "Puri", label: "Puri" },
+    { value: "Rayagada", label: "Rayagada" },
+    { value: "Sambalpur", label: "Sambalpur" },
+    { value: "Subarnapur", label: "Subarnapur" },
+    { value: "Sundargarh", label: "Sundargarh" },
     { value: "Other", label: "Other (Enter Manually)" },
   ];
 
+  // District cities (max 6 major cities per district)
   const districtCities = {
-    Angul: ["Angul", "Talcher"],
-    Cuttack: ["Cuttack", "Choudwar"],
-    Khordha: ["Bhubaneswar", "Jatani"],
-    Puri: ["Puri", "Konark"],
+    Angul: ["Angul", "Talcher", "Kaniha", "Chhendipada", "Athamallik", "Banarpal"],
+    Balasore: ["Balasore", "Bhadrak", "Jaleswar", "Soro", "Basta", "Chandipur"],
+    Bargarh: ["Bargarh", "Padampur", "Barpali", "Attabira", "Sohela", "Bhatli"],
+    Bhadrak: ["Bhadrak", "Dhamnagar", "Basudevpur", "Bhandaripokhari", "Chandbali", "Tihidi"],
+    Bolangir: ["Bolangir", "Kantabanji", "Titlagarh", "Patnagarh", "Loisingha", "Muribahal"],
+    Boudh: ["Boudh", "Harabhanga", "Manamunda", "Kantamal", "Puruna Cuttack", "Baunsuni"],
+    Cuttack: ["Cuttack", "Choudwar", "Athgarh", "Banki", "Salipur", "Niali"],
+    Deogarh: ["Deogarh", "Barkot", "Reamal", "Tileibani", "Kundheigola", "Kundheigola"],
+    Dhenkanal: ["Dhenkanal", "Kamakhyanagar", "Hindol", "Kankadahad", "Parjang", "Bhuban"],
+    Gajapati: ["Paralakhemundi", "Kasinagar", "Gumma", "Rayagada", "Mohana", "Adaba"],
+    Ganjam: ["Berhampur", "Chhatrapur", "Asika", "Bhanjanagar", "Polasara", "Kabisuryanagar"],
+    Jagatsinghpur: ["Jagatsinghpur", "Paradeep", "Kujang", "Ersama", "Balikuda", "Tirtol"],
+    Jajpur: ["Jajpur", "Danagadi", "Dharmasala", "Binjharpur", "Dasarathpur", "Korai"],
+    Jharsuguda: ["Jharsuguda", "Brajarajnagar", "Belpahar", "Kirmira", "Laikera", "Kolabira"],
+    Kalahandi: ["Bhawanipatna", "Junagarh", "Kesinga", "Dharamgarh", "M. Rampur", "Lanjigarh"],
+    Kandhamal: ["Phulbani", "Baliguda", "G. Udayagiri", "Tikabali", "Daringbadi", "Raikia"],
+    Kendrapara: ["Kendrapara", "Pattamundai", "Rajkanika", "Aul", "Derabish", "Mahakalapada"],
+    Keonjhar: ["Keonjhar", "Anandapur", "Ghatgaon", "Champua", "Telkoi", "Hatia"],
+    Khordha: ["Bhubaneswar", "Jatani", "Balipatna", "Balianta", "Tangipada", "Khordha"],
+    Koraput: ["Koraput", "Jeypore", "Sunabeda", "Kotpad", "Borigumma", "Laxmipur"],
+    Malkangiri: ["Malkangiri", "Mathili", "Kalimela", "Khairput", "Podia", "Kutuniguda"],
+    Mayurbhanj: ["Baripada", "Karanjia", "Rairangpur", "Udala", "Betnoti", "Bamanghaty"],
+    Nabarangpur: ["Nabarangpur", "Umarkote", "Raighar", "Jharigam", "Tentulikhunti", "Kundei"],
+    Nayagarh: ["Nayagarh", "Dasapalla", "Khandapada", "Odagaon", "Gania", "Nuagaon"],
+    Nuapada: ["Nuapada", "Khariar", "Komna", "Sinapali", "Jonk", "Boden"],
+    Puri: ["Puri", "Konark", "Pipili", "Nimapara", "Satapada", "Kakatpur"],
+    Rayagada: ["Rayagada", "Gunupur", "Padmapur", "Chandrapur", "Kashipur", "Muniguda"],
+    Sambalpur: ["Sambalpur", "Hirakud", "Kuchinda", "Rairakhol", "Jamankira", "Dhankauda"],
+    Subarnapur: ["Sonepur", "Binika", "Tarabha", "Ullunda", "Birmaharajpur", "Dunguripali"],
+    Sundargarh: ["Sundargarh", "Rourkela", "Rajgangpur", "Birmitrapur", "Bonai", "Kutra"],
   };
 
   const alertOptions = [
@@ -254,7 +318,7 @@ const AccidentAlert = () => {
     const fetchAccidents = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('http://localhost:2000/api/accident/accidents');
+        const response = await fetch("http://localhost:2000/api/accident/accidents");
         if (response.ok) {
           const data = await response.json();
           const accidentData = data.accidents || [];
@@ -269,7 +333,7 @@ const AccidentAlert = () => {
             }))
           );
         } else {
-          throw new Error('Failed to fetch accidents');
+          throw new Error("Failed to fetch accidents");
         }
       } catch (error) {
         console.error("Error fetching accidents:", error);
@@ -284,7 +348,7 @@ const AccidentAlert = () => {
   // Fetch nearest doctors
   const fetchNearestDoctors = async (accidentLocation) => {
     try {
-      const response = await fetch('http://localhost:2000/api/doctors');
+      const response = await fetch("http://localhost:2000/api/doctors");
       if (response.ok) {
         const doctors = await response.json();
         const nearbyDoctors = doctors
@@ -301,7 +365,7 @@ const AccidentAlert = () => {
           notifyDoctors(nearbyDoctors, accidentLocation);
         }
       } else {
-        throw new Error('Failed to fetch doctors');
+        throw new Error("Failed to fetch doctors");
       }
     } catch (error) {
       console.error("Error fetching doctors:", error);
@@ -322,7 +386,7 @@ const AccidentAlert = () => {
     e.preventDefault();
 
     if (!newAccident.location || !newAccident.description || !newAccident.city || !newAccident.state) {
-      toast.error('Location, description, city, and state are required!');
+      toast.error("Location, description, city, and state are required!");
       return;
     }
 
@@ -331,14 +395,14 @@ const AccidentAlert = () => {
       description: newAccident.description,
       city: newAccident.city === "Other" ? newAccident.manualCity : newAccident.city,
       state: newAccident.state,
-      status: 'Pending', // Default status as per AccidentDetection
-      coordinates: newAccident.pinnedLocation || liveLocation, // Optional for frontend map
+      status: "Pending",
+      coordinates: newAccident.pinnedLocation || liveLocation,
     };
 
     try {
-      const response = await fetch('http://localhost:2000/api/accident/accidents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("http://localhost:2000/api/accident/accidents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(accidentData),
       });
 
@@ -397,33 +461,51 @@ const AccidentAlert = () => {
     });
   };
 
-  const handleDistrictChange = (selectedOption) => {
+  const handleStateChange = (stateValue) => {
+    console.log("State changed to:", stateValue); // Debug log
     setNewAccident({
       ...newAccident,
-      district: selectedOption ? selectedOption.value : "",
+      state: stateValue,
+    });
+  };
+
+  const handleDistrictChange = (districtValue) => {
+    console.log("District changed to:", districtValue); // Debug log
+    setNewAccident({
+      ...newAccident,
+      district: districtValue,
       manualDistrict: "",
       city: "",
       manualCity: "",
     });
-    setManualDistrictVisible(selectedOption?.value === "Other");
+    setManualDistrictVisible(districtValue === "Other");
     setManualCityVisible(false);
   };
 
-  const handleCityChange = (selectedOption) => {
+  const handleCityChange = (cityValue) => {
+    console.log("City changed to:", cityValue); // Debug log
     setNewAccident({
       ...newAccident,
-      city: selectedOption ? selectedOption.value : "",
+      city: cityValue,
       manualCity: "",
     });
-    setManualCityVisible(selectedOption?.value === "Other");
+    setManualCityVisible(cityValue === "Other");
+  };
+
+  const handleAlertTypeChange = (alertTypeValue) => {
+    console.log("Alert Type changed to:", alertTypeValue); // Debug log
+    setNewAccident({
+      ...newAccident,
+      alertType: alertTypeValue,
+    });
   };
 
   const districtCityOptions =
     newAccident.district && newAccident.district !== "Other"
-      ? districtCities[newAccident.district]?.map((city) => ({
+      ? (districtCities[newAccident.district] || []).map((city) => ({
           value: city,
           label: city,
-        })) || []
+        }))
       : [{ value: "Other", label: "Other (Enter Manually)" }];
 
   const handleEmergencyAlertToggle = () => {
@@ -441,261 +523,268 @@ const AccidentAlert = () => {
   return (
     <div className={styles.stylishContainer}>
       <div className={styles.stylishContent}>
-        <h2 className={styles.sectionTitle}>Accident Overview</h2>
+        <h2 className={styles.sectionTitle}>ACCIDENT ALERT</h2>
 
-        {/* Map Display */}
-        <div className={styles.mapContainer}>
-          <MapContainer
-            center={liveLocation}
-            zoom={13}
-            zoomControl={false}
-            style={{ height: "400px", width: "100%", borderRadius: "10px" }}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
-            <Polygon
-              positions={hexagonPoints}
-              pathOptions={{ color: "red", fillColor: "rgba(255, 0, 0, 0.2)", fillOpacity: 0.2, weight: 2 }}
-            />
-            <CustomMarker position={liveLocation} alertType="Normal">
-              <Popup>
-                Your Location: Lat {liveLocation.lat.toFixed(4)}, Lng {liveLocation.lng.toFixed(4)}
-              </Popup>
-            </CustomMarker>
-            {accidents.map((accident) => (
-              <CustomMarker
-                key={accident._id}
-                position={accident.coordinates || user.defaultLocation}
-                alertType={accident.alertType || "Normal"}
-              >
+        {/* Map and Form Side by Side on Desktop */}
+        <div className={styles.mapFormContainer}>
+          {/* Map Display */}
+          <div className={styles.mapContainer}>
+            <MapContainer
+              center={liveLocation}
+              zoom={13}
+              zoomControl={false}
+              style={{ height: "400px", width: "100%", borderRadius: "10px" }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              <Polygon
+                positions={hexagonPoints}
+                pathOptions={{ color: "red", fillColor: "rgba(255, 0, 0, 0.2)", fillOpacity: 0.2, weight: 2 }}
+              />
+              <CustomMarker position={liveLocation} alertType="Normal">
                 <Popup>
-                  <strong>
-                    {accident.location}, {accident.city}, {accident.state}
-                  </strong>
-                  <br />
-                  Time: {convertToIST(accident.time)}
-                  <br />
-                  Status: {accident.status || "Pending"}
-                  <br />
-                  Distance: {accident.distance.toFixed(2)} km
-                  <br />
-                  {accident.description}
+                  Your Location: Lat {liveLocation.lat.toFixed(4)}, Lng {liveLocation.lng.toFixed(4)}
                 </Popup>
               </CustomMarker>
-            ))}
-          </MapContainer>
+              {accidents.map((accident) => (
+                <CustomMarker
+                  key={accident._id}
+                  position={accident.coordinates || user.defaultLocation}
+                  alertType={accident.alertType || "Normal"}
+                >
+                  <Popup>
+                    <strong>
+                      {accident.location}, {accident.city}, {accident.state}
+                    </strong>
+                    <br />
+                    Time: {convertToIST(accident.time)}
+                    <br />
+                    Status: {accident.status || "Pending"}
+                    <br />
+                    Distance: {accident.distance.toFixed(2)} km
+                    <br />
+                    {accident.description}
+                  </Popup>
+                </CustomMarker>
+              ))}
+              {isLocationPickerOpen && <LocationPicker onLocationSelect={handleLocationPin} initialLocation={liveLocation} />}
+            </MapContainer>
+          </div>
+
+          {/* Report New Accident Form */}
+          <div className={styles.accidentFormContainer}>
+            <h3 className={styles.subSectionTitle}>Report New Accident</h3>
+            <form className={styles.accidentForm} onSubmit={handleReportAccident}>
+              <div className={styles.inputField}>
+                <div className={styles.inputIcon}>
+                  <LocationIcon />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Pin accident location on map"
+                  value={pinnedLocationDetails.displayName || newAccident.location}
+                  onChange={(e) => setNewAccident({ ...newAccident, location: e.target.value })}
+                  className={styles.input}
+                  required
+                />
+                <button
+                  className={styles.pinButton}
+                  onClick={() => setIsLocationPickerOpen(true)}
+                  type="button"
+                >
+                  Pin Location
+                </button>
+              </div>
+              <div className={styles.inputField}>
+                <div className={styles.inputIcon}>
+                  <LocationIcon />
+                </div>
+                <PortalSelect
+                  options={[{ value: "Odisha", label: "Odisha" }]}
+                  value={newAccident.state}
+                  onChange={handleStateChange}
+                  placeholder="State"
+                  className={styles.input}
+                />
+              </div>
+              <div className={styles.inputField}>
+                <div className={styles.inputIcon}>
+                  <LocationIcon />
+                </div>
+                <PortalSelect
+                  options={odishaDistricts}
+                  value={newAccident.district}
+                  onChange={handleDistrictChange}
+                  placeholder="Select District"
+                  className={styles.input}
+                />
+              </div>
+              {manualDistrictVisible && (
+                <div className={styles.inputField}>
+                  <input
+                    type="text"
+                    placeholder="Enter district manually"
+                    value={newAccident.manualDistrict}
+                    onChange={(e) =>
+                      setNewAccident({ ...newAccident, manualDistrict: e.target.value, district: "Other" })
+                    }
+                    className={styles.input}
+                  />
+                </div>
+              )}
+              <div className={styles.inputField}>
+                <div className={styles.inputIcon}>
+                  <LocationIcon />
+                </div>
+                <PortalSelect
+                  options={districtCityOptions}
+                  value={newAccident.city}
+                  onChange={handleCityChange}
+                  placeholder="Select City"
+                  className={styles.input}
+                />
+              </div>
+              {manualCityVisible && (
+                <div className={styles.inputField}>
+                  <input
+                    type="text"
+                    placeholder="Enter city manually"
+                    value={newAccident.manualCity}
+                    onChange={(e) =>
+                      setNewAccident({ ...newAccident, manualCity: e.target.value, city: "Other" })
+                    }
+                    className={styles.input}
+                  />
+                </div>
+              )}
+              <div className={styles.inputField}>
+                <div className={styles.inputIcon}>
+                  <WarningIcon />
+                </div>
+                <PortalSelect
+                  options={alertOptions}
+                  value={newAccident.alertType}
+                  onChange={handleAlertTypeChange}
+                  placeholder="Select Alert Type"
+                  className={styles.input}
+                />
+              </div>
+              <div className={styles.inputField}>
+                <div className={styles.inputIcon}>
+                  <WarningIcon />
+                </div>
+                <textarea
+                  value={newAccident.description}
+                  onChange={(e) => setNewAccident({ ...newAccident, description: e.target.value })}
+                  placeholder="Describe the accident"
+                  className={styles.input}
+                  rows="3"
+                  required
+                />
+              </div>
+              <button type="submit" className={styles.actionButton}>
+                Report Accident
+              </button>
+            </form>
+          </div>
         </div>
 
-        {/* Accident List */}
-        <h2 className={styles.sectionTitle}>Recent Accidents (Within 10km)</h2>
-        {isLoading ? (
-          <div className={styles.loading}>Loading accidents...</div>
-        ) : (
-          <div className={styles.accidentList}>
-            {accidents
-              .filter((accident) => accident.distance < 10)
-              .sort((a, b) => a.distance - b.distance)
-              .map((accident) => (
-                <div key={accident._id} className={styles.accidentItem}>
-                  <p>
-                    <ClockIcon className={styles.icon} /> {convertToIST(accident.time)}
-                  </p>
-                  <p>
-                    <LocationIcon className={styles.icon} /> {accident.location}, {accident.city}, {accident.state}
-                  </p>
-                  <p>
-                    <WarningIcon className={styles.icon} /> {accident.status || "Pending"} - {accident.distance.toFixed(2)} km away
-                  </p>
-                  {accident.description && (
-                    <p className={styles.accidentDescription}>{accident.description}</p>
-                  )}
-                </div>
-              ))}
-            {accidents.filter((accident) => accident.distance < 10).length === 0 && (
-              <p>No accidents within 10km.</p>
-            )}
-          </div>
-        )}
-
-        {/* Emergency Actions */}
-        {isReporting && (
-          <div className={styles.emergencyNotification}>
-            <h3 className={styles.notificationTitle}>
-              <WarningIcon className={styles.warningIcon} /> Accident Reported - Emergency Actions
-            </h3>
-            <p>
-              <PhoneIcon className={styles.icon} /> Emergency Call Options:
-              {["999", "Police", "Ambulance", ...user.emergencyContacts].map((option, index) => (
-                <button
-                  key={index}
-                  className={styles.emergencyCallButton}
-                  onClick={() => console.log(`Calling ${option}...`)}
-                >
-                  {option.includes("+91") ? `Family #${index - 2}` : option}
-                </button>
-              ))}
-            </p>
-            {nearestDoctors.length > 0 && (
-              <div>
-                <p>
-                  <WarningIcon className={styles.icon} /> Nearest Doctors Notified:
-                </p>
-                {nearestDoctors.map((doctor) => (
-                  <p key={doctor._id}>
-                    Dr. {doctor.firstName} {doctor.lastName} ({doctor.specialization}) - {doctor.distance.toFixed(2)} km
-                  </p>
-                ))}
+        {/* Other Content (Stacked Below Map and Form) */}
+        <div className={styles.otherContent}>
+          {/* Recent Accidents List */}
+          <div className={styles.accidentListContainer}>
+            <h3 className={styles.subSectionTitle}>Recent Accidents</h3>
+            {isLoading ? (
+              <div className={styles.loading}>Loading accidents...</div>
+            ) : (
+              <div className={styles.accidentList}>
+                {accidents
+                  .filter((accident) => accident.distance < 10)
+                  .sort((a, b) => a.distance - b.distance)
+                  .map((accident) => (
+                    <div key={accident._id} className={styles.accidentItem}>
+                      <p>
+                        <ClockIcon className={styles.icon} /> {convertToIST(accident.time)}
+                      </p>
+                      <p>
+                        <LocationIcon className={styles.icon} /> {accident.location}, {accident.city}, {accident.state}
+                      </p>
+                      <p>
+                        <WarningIcon className={styles.icon} /> {accident.status || "Pending"} - {accident.distance.toFixed(2)} km away
+                      </p>
+                      {accident.description && (
+                        <p className={styles.accidentDescription}>{accident.description}</p>
+                      )}
+                    </div>
+                  ))}
+                {accidents.filter((accident) => accident.distance < 10).length === 0 && (
+                  <p>No accidents within 10km.</p>
+                )}
               </div>
             )}
-            <div className={styles.bloodRequest}>
+          </div>
+
+          {/* Emergency Actions */}
+          {isReporting && (
+            <div className={styles.emergencyNotification}>
+              <h3 className={styles.notificationTitle}>
+                <WarningIcon className={styles.warningIcon} /> Accident Reported - Emergency Actions
+              </h3>
               <p>
-                <BloodIcon className={styles.icon} /> Blood Required?
+                <PhoneIcon className={styles.icon} /> Emergency Call Options:
+                {["999", "Police", "Ambulance", ...user.emergencyContacts].map((option, index) => (
+                  <button
+                    key={index}
+                    className={styles.emergencyCallButton}
+                    onClick={() => console.log(`Calling ${option}...`)}
+                  >
+                    {option.includes("+91") ? `Family #${index - 2}` : option}
+                  </button>
+                ))}
               </p>
-              <button
-                className={`${styles.actionButton} ${bloodRequired ? styles.active : ""}`}
-                onClick={toggleBloodRequest}
-              >
-                {bloodRequired ? "Yes (Request Sent)" : "No"}
-              </button>
-              {bloodRequired && (
-                <p className={styles.bloodMessage}>
-                  URGENT! Needs {user.bloodGroup} at nearest hospital.
-                </p>
+              {nearestDoctors.length > 0 && (
+                <div>
+                  <p>
+                    <WarningIcon className={styles.icon} /> Nearest Doctors Notified:
+                  </p>
+                  {nearestDoctors.map((doctor) => (
+                    <p key={doctor._id}>
+                      Dr. {doctor.firstName} {doctor.lastName} ({doctor.specialization}) - {doctor.distance.toFixed(2)} km
+                    </p>
+                  ))}
+                </div>
               )}
+              <div className={styles.bloodRequest}>
+                <p>
+                  <BloodIcon className={styles.icon} /> Blood Required?
+                </p>
+                <button
+                  className={`${styles.actionButton} ${bloodRequired ? styles.active : ""}`}
+                  onClick={toggleBloodRequest}
+                >
+                  {bloodRequired ? "Yes (Request Sent)" : "No"}
+                </button>
+                {bloodRequired && (
+                  <p className={styles.bloodMessage}>
+                    URGENT! Needs {user.bloodGroup} at nearest hospital.
+                  </p>
+                )}
+              </div>
+              <button className={styles.actionButton} onClick={() => setIsReporting(false)}>
+                Close Emergency Actions
+              </button>
             </div>
-            <button className={styles.actionButton} onClick={() => setIsReporting(false)}>
-              Close Emergency Actions
-            </button>
-          </div>
-        )}
+          )}
 
-        {/* Report New Accident */}
-        <h2 className={styles.sectionTitle}>Report New Accident</h2>
-        <form className={styles.accidentForm} onSubmit={handleReportAccident}>
-          <div className={styles.locationField}>
-            <div className={styles.inputIcon}>
-              <LocationIcon />
-            </div>
-            <input
-              type="text"
-              placeholder="Pin accident location on map"
-              value={pinnedLocationDetails.displayName || newAccident.location}
-              onChange={(e) => setNewAccident({ ...newAccident, location: e.target.value })}
-              className={styles.input}
-              required
-            />
-            <button
-              className={styles.pinButton}
-              onClick={() => setIsLocationPickerOpen(true)}
-              type="button"
-            >
-              Pin Location
-            </button>
-          </div>
-          <div className={styles.inputField}>
-            <div className={styles.inputIcon}>
-              <LocationIcon />
-            </div>
-            <PortalSelect
-              options={[{ value: "Odisha", label: "Odisha" }]}
-              value={newAccident.state}
-              onChange={(selectedOption) =>
-                setNewAccident({ ...newAccident, state: selectedOption ? selectedOption.value : "" })
-              }
-              placeholder="State"
-              className={styles.input}
-            />
-          </div>
-          <div className={styles.inputField}>
-            <div className={styles.inputIcon}>
-              <LocationIcon />
-            </div>
-            <PortalSelect
-              options={odishaDistricts}
-              value={newAccident.district}
-              onChange={handleDistrictChange}
-              placeholder="Select District"
-              className={styles.input}
-            />
-          </div>
-          {manualDistrictVisible && (
-            <div className={styles.inputField}>
-              <input
-                type="text"
-                placeholder="Enter district manually"
-                value={newAccident.manualDistrict}
-                onChange={(e) =>
-                  setNewAccident({ ...newAccident, manualDistrict: e.target.value, district: "Other" })
-                }
-                className={styles.input}
-              />
-            </div>
-          )}
-          <div className={styles.inputField}>
-            <div className={styles.inputIcon}>
-              <LocationIcon />
-            </div>
-            <PortalSelect
-              options={districtCityOptions}
-              value={newAccident.city}
-              onChange={handleCityChange}
-              placeholder="Select City"
-              className={styles.input}
-            />
-          </div>
-          {manualCityVisible && (
-            <div className={styles.inputField}>
-              <input
-                type="text"
-                placeholder="Enter city manually"
-                value={newAccident.manualCity}
-                onChange={(e) =>
-                  setNewAccident({ ...newAccident, manualCity: e.target.value, city: "Other" })
-                }
-                className={styles.input}
-              />
-            </div>
-          )}
-          <div className={styles.inputField}>
-            <div className={styles.inputIcon}>
-              <WarningIcon />
-            </div>
-            <PortalSelect
-              options={alertOptions}
-              value={newAccident.alertType}
-              onChange={(selected) =>
-                setNewAccident({ ...newAccident, alertType: selected ? selected.value : "Normal" })
-              }
-              placeholder="Select Alert Type"
-              className={styles.input}
-            />
-          </div>
-          <div className={styles.inputField}>
-            <div className={styles.inputIcon}>
-              <WarningIcon />
-            </div>
-            <textarea
-              value={newAccident.description}
-              onChange={(e) => setNewAccident({ ...newAccident, description: e.target.value })}
-              placeholder="Describe the accident"
-              className={styles.input}
-              rows="3"
-              required
-            />
-          </div>
-          <button type="submit" className={styles.actionButton}>
-            Report Accident
+          {/* Emergency Settings */}
+          <h2 className={styles.sectionTitle}>Emergency Settings</h2>
+          <button className={styles.actionButton} onClick={handleEmergencyAlertToggle}>
+            <NotificationIcon className={styles.buttonIcon} />
+            {isEmergencyAlertEnabled ? "Disable Emergency Alert" : "Enable Emergency Alert"}
           </button>
-        </form>
-
-        {/* Emergency Settings */}
-        <h2 className={styles.sectionTitle}>Emergency Settings</h2>
-        <button className={styles.actionButton} onClick={handleEmergencyAlertToggle}>
-          <NotificationIcon className={styles.buttonIcon} />
-          {isEmergencyAlertEnabled ? "Disable Emergency Alert" : "Enable Emergency Alert"}
-        </button>
+        </div>
 
         {/* Location Picker Modal */}
         {isLocationPickerOpen && (
