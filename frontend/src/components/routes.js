@@ -61,7 +61,7 @@ function RoutesOfThePage() {
             <div className="App">
                 <Routes>
                     {/* Home and common header */}
-                    <Route path='/Landingpage' element={<><Header /><LandingPage /></>} />
+                    <Route path='/Landingpage' element={<><Header /><Dashboard /></>} />
                     <Route path='/' element={<><Header /><Authpage /></>} />
 
                     {/* Auth routes */}
