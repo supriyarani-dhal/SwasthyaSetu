@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; // Import CSS for toast notifications
+import 'react-toastify/dist/ReactToastify.css';
 
 function DoctorRegister() {
   const [name, setName] = useState("");
@@ -16,25 +16,37 @@ function DoctorRegister() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Basic client-side validation
+    if (!email.includes("@") || !name.trim() || !contact.trim() || !specialization.trim() || !password.trim() || !experience || !currentHospital.trim() || !address.trim()) {
+      toast.error("Please fill in all fields correctly.");
+      return;
+    }
+
+    const payload = {
+      name,
+      email,
+      password,
+      specialization,
+      contact,
+      experience: Number(experience), // Ensure number type
+      currentHospital, // Adjust to `current_hospital` if server expects snake_case
+      address,
+    };
+
+    console.log("Sending payload:", payload); // Debug log
+
     try {
       const response = await fetch("http://localhost:2000/api/doctor/doctor-registration", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          specialization,
-          contact,
-          experience,
-          currentHospital,
-          address,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
+      console.log("Server response:", data); // Debug log
 
       if (response.ok) {
         toast.success("Registration successful!");
@@ -43,7 +55,7 @@ function DoctorRegister() {
         toast.error(data.error || "Registration failed. Please try again.");
       }
     } catch (err) {
-      console.error(err);
+      console.error("Fetch error:", err);
       toast.error("An error occurred. Please try again.");
     }
   };
@@ -179,7 +191,7 @@ function DoctorRegister() {
         {/* Right Column - Image */}
         <div className="col-12 col-md-6 d-flex justify-content-center align-items-center">
           <img
-            src="https://i.ytimg.com/vi/83u9j-Yjn1g/maxresdefault.jpg" // Replace with your actual image URL
+            src="https://i.ytimg.com/vi/83u9j-Yjn1g/maxresdefault.jpg"
             alt="Doctor Registration"
             className="img-fluid"
             style={{ borderRadius: '15px', objectFit: 'cover' }}
@@ -187,7 +199,6 @@ function DoctorRegister() {
         </div>
       </div>
 
-      {/* ToastContainer for notifications */}
       <ToastContainer position="top-center" autoClose={3000} />
     </div>
   );

@@ -66,7 +66,7 @@ function BloodDonation() {
       bloodType: requestBloodType,
       quantity: requestQuantity,
       location: requestLocation,
-      patientName: patientName,
+      donaerName: patientName,
       contact: patientContact,
       priority: priority,
     };

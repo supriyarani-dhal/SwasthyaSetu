@@ -11,6 +11,22 @@ const BloodSchema = new mongoose.Schema({
     required: true, 
     enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] 
   },
+  quantity:{
+    type:Number,
+    required:true,
+  },
+  donaerName:{
+    type:String,
+    required:true
+  },
+  contact:{
+    type:Number,
+    required:true,
+  },
+  location:{
+    type:String,
+    required:true,
+  }
   // ... rest of the Blood schema fields
 });
 

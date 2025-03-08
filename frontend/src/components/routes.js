@@ -1,5 +1,9 @@
 import React from 'react';
+import { Navbar } from 'react-bootstrap';
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import ChatBot from './Chat/Chatbot';
+import Chat from './Chat/SuuSri/SuuSri';
+import DoctorsData from './DoctorsData/DoctorsData';
 import Accidents from './Doctorspecificscreen/Accidents';
 import DrBloodDonation from './Doctorspecificscreen/BloodDonation';
 import DrBloodrequests from './Doctorspecificscreen/DrBloodRequests';
@@ -7,6 +11,38 @@ import AccidentDetection from './Features/AccidentDetection';
 import BloodDonation from './Features/BloodDonation';
 import FetchDonors from "./Features/FetchDonors";
 import FetchRequest from './Features/Fetchrequest';
+import MedicineStore from './Map/MedicineStore';
+import Home from './Mobile/Home';
+import NavBar from './Mobile/NavBar';
+import AccidentAlert from './Mobile/pages/Accident/AccidentAlert';
+import Ambulance from './Mobile/pages/Ambulance/Ambulance';
+import BloodDonateReceive from './Mobile/pages/BloodDonateReceive/BloodDonateReceive';
+import AllLabs from './Mobile/pages/BloodTest/AllLabs';
+import BloodTest from './Mobile/pages/BloodTest/BloodTest';
+import CheckReport from './Mobile/pages/BloodTest/CheckReport';
+import DownloadReport from './Mobile/pages/BloodTest/DownloadReport';
+import FollowUp from './Mobile/pages/BloodTest/FollowUp';
+import TrackOrder from './Mobile/pages/BloodTest/TrackOrder';
+import Nutrition from './Mobile/pages/DietChart/Nutrition';
+import Doctors from './Mobile/pages/Doctors/Doctors';
+import EHRHealthData from './Mobile/pages/EHRData/EHRHealthData';
+import MedicalHistory from './Mobile/pages/EHRData/MedicineHistory';
+import NotFound from './Mobile/pages/Error/404';
+import AllHospitals from './Mobile/pages/Hospitals/AllHospitals';
+// import AppointmentDetails from './Mobile/pages/Hospitals/AppointmentDetails';
+import VideoCall from './Features/Vediocall';
+import Billing from './Mobile/pages/Hospitals/Billing';
+import EmergencyServices from './Mobile/pages/Hospitals/EmergencyServices';
+import HospitalDashboard from './Mobile/pages/Hospitals/Hospital';
+import MedicalRecords from './Mobile/pages/Hospitals/MedicalRecords';
+import AllMedicineStore from './Mobile/pages/MedicineStore/AllMedicineStore';
+import Medicine from './Mobile/pages/MedicineStore/Medicine';
+import MedicineAll from './Mobile/pages/MedicineStore/MedicineAll';
+import MedicineSchedule from './Mobile/pages/MedicineTimeTable/MedicineTimeTable';
+import Profile from './Mobile/pages/Profile/Profile';
+import Welcome from './Mobile/Welcome';
+import PatientsData from './Patientdata/PatientsData';
+import PatientProfile from './PatientProfile/PatientProfile';
 import Doctorheader from './RegisterasDoctor/Doctorheader';
 import DoctorLogin from './RegisterasDoctor/DoctorLogin';
 import DoctorRegister from './RegisterasDoctor/DoctorRegister';
@@ -17,41 +53,6 @@ import Dashboard from './Screens/Dashboard';
 import Doctorpage from './Screens/Doctorpage';
 import Header from './Screens/Header'; // Regular header for all pages except doctor
 import LandingPage from './Screens/landingpage';
-import PatientsData from './Patientdata/PatientsData';
-import PatientProfile from './PatientProfile/PatientProfile';
-import DoctorsData from './DoctorsData/DoctorsData';
-import MedicineStore from './Map/MedicineStore';
-import Home from './Mobile/Home';
-import NavBar from './Mobile/NavBar';
-import ChatBot from './Chat/Chatbot';
-import Welcome from './Mobile/Welcome';
-import Profile from './Mobile/pages/Profile/Profile';
-import BloodDonateReceive from './Mobile/pages/BloodDonateReceive/BloodDonateReceive';
-import AccidentAlert from './Mobile/pages/Accident/AccidentAlert';
-import BloodTest from './Mobile/pages/BloodTest/BloodTest';
-import AllLabs from './Mobile/pages/BloodTest/AllLabs';
-import CheckReport from './Mobile/pages/BloodTest/CheckReport';
-import DownloadReport from './Mobile/pages/BloodTest/DownloadReport';
-import FollowUp from './Mobile/pages/BloodTest/FollowUp';
-import NotFound from './Mobile/pages/Error/404';
-import TrackOrder from './Mobile/pages/BloodTest/TrackOrder';
-import Medicine from './Mobile/pages/MedicineStore/Medicine';
-import { Navbar } from 'react-bootstrap';
-import AllMedicineStore from './Mobile/pages/MedicineStore/AllMedicineStore';
-import MedicineAll from './Mobile/pages/MedicineStore/MedicineAll';
-import Doctors from './Mobile/pages/Doctors/Doctors';
-import MedicalHistory from './Mobile/pages/EHRData/MedicineHistory';
-import MedicineSchedule from './Mobile/pages/MedicineTimeTable/MedicineTimeTable';
-import Nutrition from './Mobile/pages/DietChart/Nutrition';
-import EHRHealthData from './Mobile/pages/EHRData/EHRHealthData';
-import Ambulance from './Mobile/pages/Ambulance/Ambulance';
-import Chat from './Chat/SuuSri/SuuSri';
-import HospitalDashboard from './Mobile/pages/Hospitals/Hospital';
-import MedicalRecords from './Mobile/pages/Hospitals/MedicalRecords';
-import EmergencyServices from './Mobile/pages/Hospitals/EmergencyServices';
-import Billing from './Mobile/pages/Hospitals/Billing';
-import AllHospitals from './Mobile/pages/Hospitals/AllHospitals';
-import AppointmentDetails from './Mobile/pages/Hospitals/AppointmentDetails';
 
 function RoutesOfThePage() {
     return (
@@ -135,9 +136,16 @@ function RoutesOfThePage() {
                     <Route path="/medical-records" element={<><MedicalRecords /><NavBar/></>} />    
                     <Route path="/emergency-services" element={<><EmergencyServices/><NavBar/></>} />
                     <Route path="/billing" element={<><Billing/><NavBar/></>} />
-                    <Route path="/appointment/:bookingId" element={<AppointmentDetails />} />
-                    <Route path="/nutritionists" element={<><NutritionistDietPlan/><NavBar/></>} />
-                    <Route path="/nutritionist-appointments" element={<><NutritionistAppointments/><NavBar/></>} />
+                    {/* <Route path="/appointment/:bookingId" element={<AppointmentDetails />} /> */}
+                    {/* <Route path="/nutritionists" element={<><NutritionistDietPlan/><NavBar/></>} /> */}
+                    {/* <Route path="/nutritionist-appointments" element={<><NutritionistAppointments/><NavBar/></>} /> */}
+
+
+                    {/* devio call routes */}
+                    <Route path='/vedio-calling' element={<VideoCall />} />
+
+
+
 
                 </Routes>
             </div>

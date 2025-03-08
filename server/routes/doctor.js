@@ -6,6 +6,7 @@ const Doctor = require('../models/Doctor');
 router.post("/doctor-registration", async (req, res) => {
   try {
     const { name, email, password, specialization, contact, experience, currentHospital, address } = req.body;
+    
 
     if (!name || !email || !password || !specialization || !contact || !experience || !currentHospital || !address) {
       return res.status(400).json({ message: "All fields are required" });
@@ -27,6 +28,9 @@ router.post("/doctor-registration", async (req, res) => {
       currenthospital: currentHospital,
       address,
     });
+
+    console.log(newDoctor);
+    
 
     await newDoctor.save();
     res.status(201).json({ message: "Doctor registered successfully" });

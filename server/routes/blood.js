@@ -15,7 +15,7 @@ router.post("/donate", async (req, res) => {
       bloodType,
       quantity,
       location,
-      name: name || req.session.user.userName,
+      donaerName: name || req.session.user.userName,
       contact: contact || req.session.user.userEmail,
     };
 
