@@ -1,16 +1,22 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const User = require('../models/User');
+const bcrypt = require("bcryptjs");
+const User = require("../models/User");
 
 router.post("/userAuth", async (req, res) => {
   const { name, email, password, userType } = req.body;
   try {
+    console.log(process.env.MONGODB_URI);
     if (await User.findOne({ email })) {
       return res.status(400).json({ error: "User already exists" });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword, userType });
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      userType,
+    });
     await newUser.save();
     res.status(201).json({ message: "User registered successfully" });
   } catch (err) {
@@ -42,14 +48,17 @@ router.post("/login", async (req, res) => {
 
 router.get("/user", async (req, res) => {
   try {
-    if (!req.session.user) return res.status(401).json({ error: "User not authenticated" });
-    const user = await User.findById(req.session.user.userId).select("-password");
+    if (!req.session.user)
+      return res.status(401).json({ error: "User not authenticated" });
+    const user = await User.findById(req.session.user.userId).select(
+      "-password"
+    );
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.status(200).json({ 
-      userName: user.name, 
-      userId: user._id, 
-      userEmail: user.email, 
-      userType: user.userType 
+    res.status(200).json({
+      userName: user.name,
+      userId: user._id,
+      userEmail: user.email,
+      userType: user.userType,
     });
   } catch (err) {
     console.error(err);
