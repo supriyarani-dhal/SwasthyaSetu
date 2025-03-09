@@ -1,17 +1,59 @@
 import React, { useState, useEffect, useRef } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useNavigate } from "react-router-dom";
-import styles from "./SuuSri.module.css"; // Verify this path matches your project structure
+import styles from "./SuuSri.module.css";
 
 const Chat = () => {
   const [userInput, setUserInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [conversationHistory, setConversationHistory] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const userName = "Alekha"; // Removed setUserName since it's static
+  const [isListening, setIsListening] = useState(false);
+  const userName = "Alekha";
   const chatEndRef = useRef(null);
   const navigate = useNavigate();
   const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY || "AIzaSyDJ7nuaU3xBtB2H6VPGDes8vtICGbrRTCo";
+
+  // Speech Recognition and Synthesis Setup
+  const recognition = useRef(null);
+  const synth = window.speechSynthesis;
+
+  useEffect(() => {
+    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition.current = new SpeechRecognition();
+      recognition.current.continuous = false;
+      recognition.current.interimResults = false;
+      recognition.current.lang = "en-IN"; // For speech input (user might speak in Hinglish)
+
+      recognition.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setUserInput(transcript);
+        setIsListening(false);
+        sendMessage(transcript);
+      };
+
+      recognition.current.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        setIsListening(false);
+        setMessages((prev) => [
+          ...prev,
+          { text: "Oops, Alekha! Speech samajh nahi aaya, fir se bolo na...", sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+        ]);
+      };
+
+      recognition.current.onend = () => {
+        setIsListening(false);
+      };
+    } else {
+      console.warn("Speech recognition not supported in this browser.");
+    }
+
+    // Ensure voices are loaded before speaking
+    synth.onvoiceschanged = () => {
+      console.log("Voices loaded:", synth.getVoices());
+    };
+  }, []);
 
   // Alekha's EHR Data
   const ehrData = {
@@ -107,7 +149,7 @@ const Chat = () => {
 
   useEffect(() => {
     const initialMessages = [{
-      text: `Welcome, ${userName}! Main hoon Suusri, apki cute health assistant.  Kya hua hai, bandhu? Aaj kya help karu? ...`,
+      text: `Welcome, ${userName}! Main hoon Suusri, apki cute health assistant. Bol na, kya hua hai, bandhu? Aaj kya help karu? ...`,
       sender: "ai",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     }];
@@ -116,11 +158,15 @@ const Chat = () => {
     const initialHistory = [
       {
         role: "model",
-        parts: [{ text: `Welcome, ${userName}! Main hoon Suusri, teri cute health assistant.  Kya hua hai, bandhu? Aaj kya help karu? ...` }],
+        parts: [{ text: `Welcome, ${userName}! Main hoon Suusri, teri cute health assistant. Bol na, kya hua hai, bandhu? Aaj kya help karu? ...` }],
       },
     ];
     setConversationHistory(initialHistory);
-  }, [userName]); // Added userName to dependency array
+
+    // Speak the welcome message (convert to more Hindi-heavy for better pronunciation)
+    const hindiWelcome = `स्वागत है, ${userName}! मैं हूँ सूसरी, आपकी प्यारी हेल्थ असिस्टेंट। बोलो ना, क्या हुआ है, बंधु? आज क्या मदद करूँ? ...`;
+    speakText(hindiWelcome);
+  }, [userName]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -130,48 +176,120 @@ const Chat = () => {
     const lowerInput = input.toLowerCase();
     if (lowerInput.includes("blood donate") || lowerInput.includes("blood donation")) {
       return "/blood-donation";
+    } else if (lowerInput.includes("blood test")) {
+      return "/blood-test";
+    } else if (lowerInput.includes("all labs")) {
+      return "/all-labs";
+    } else if (lowerInput.includes("check report")) {
+      return "/check-report";
+    } else if (lowerInput.includes("download report")) {
+      return "/download-report";
+    } else if (lowerInput.includes("follow up")) {
+      return "/follow-up";
+    } else if (lowerInput.includes("track order")) {
+      return "/track-order";
     } else if (lowerInput.includes("doctor") || lowerInput.includes("appointment")) {
       return "/doctors";
+    } else if (lowerInput.includes("medicine schedule")) {
+      return "/medicine-schedule";
+    } else if (lowerInput.includes("medicine all")) {
+      return "/medicine-all";
     } else if (lowerInput.includes("medicine") || lowerInput.includes("dawai")) {
       return "/medicine-stores";
-    } else if (lowerInput.includes("hospital") || lowerInput.includes("aspatal")) {
-      return "/all-hospitals";
-    } else if (lowerInput.includes("accident") || lowerInput.includes("emergency")) {
-      return "/accident-alert";
-    } else if (lowerInput.includes("blood test") || lowerInput.includes("test")) {
-      return "/blood-test";
     } else if (lowerInput.includes("nutrition") || lowerInput.includes("diet")) {
       return "/nutrition";
-    } else if (lowerInput.includes("ambulance")) {
-      return "/ambulance";
     } else if (lowerInput.includes("ehr") || lowerInput.includes("health data")) {
       return "/EHRHealthData";
+    } else if (lowerInput.includes("ambulance")) {
+      return "/ambulance";
+    } else if (lowerInput.includes("hospital") || lowerInput.includes("aspatal")) {
+      return "/all-hospitals";
+    } else if (lowerInput.includes("medical records")) {
+      return "/medical-records";
+    } else if (lowerInput.includes("emergency services")) {
+      return "/emergency-services";
+    } else if (lowerInput.includes("billing")) {
+      return "/billing";
+    } else if (lowerInput.includes("nutritionist")) {
+      return "/nutritionists";
+    } else if (lowerInput.includes("nutritionist appointment")) {
+      return "/nutritionist-appointments";
+    } else if (lowerInput.includes("video call") || lowerInput.includes("video calling")) {
+      return "/vedio-calling";
+    } else if (lowerInput.includes("accident") || lowerInput.includes("emergency")) {
+      return "/accident-alert";
     }
     return null;
   };
 
-  const sendMessage = async () => {
-    if (!userInput.trim()) return;
+  const startListening = () => {
+    if (recognition.current && !isListening) {
+      setIsListening(true);
+      recognition.current.start();
+      setMessages((prev) => [
+        ...prev,
+        { text: "Sun rahi hoon, Alekha! Bol na...", sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+      ]);
+      speakText("सुन रही हूँ, Alekha! बोल ना...");
+    }
+  };
+
+  const speakText = (text) => {
+    if (synth.speaking) {
+      console.error("SpeechSynthesis is already speaking.");
+      return;
+    }
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "hi-IN"; // Hindi for Hinglish-like pronunciation
+      utterance.rate = 1;
+      utterance.pitch = 1.2; // Slightly higher pitch for a female voice
+
+      // Select a Hindi female voice
+      const voices = synth.getVoices();
+      const hindiVoice = voices.find(
+        (voice) => 
+          (voice.lang === "hi-IN" || voice.name.includes("Google हिन्दी")) && 
+          (voice.name.toLowerCase().includes("female") || voice.gender === "female")
+      );
+
+      if (hindiVoice) {
+        utterance.voice = hindiVoice;
+        console.log("Using voice:", hindiVoice.name);
+      } else {
+        console.warn("Hindi female voice not found, using default hi-IN voice.");
+      }
+
+      synth.speak(utterance);
+    } else {
+      console.warn("Speech synthesis not supported in this browser.");
+    }
+  };
+
+  const sendMessage = async (input = userInput) => {
+    if (!input.trim()) return;
 
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    const newMessages = [...messages, { text: userInput, sender: "user", timestamp }];
+    const newMessages = [...messages, { text: input, sender: "user", timestamp }];
     setMessages(newMessages);
     setUserInput("");
     setIsTyping(true);
 
     try {
-      const redirectPath = redirectToFeature(userInput);
+      const redirectPath = redirectToFeature(input);
       if (redirectPath) {
         const redirectMessage = `Alekha, main tujhe ${redirectPath.split('/')[1].replace('-', ' ')} page pe le jati hoon! Ek second ruko...`;
+        const hindiRedirectMessage = `Alekha, मैं तुझे ${redirectPath.split('/')[1].replace('-', ' ')} पेज पर ले जाती हूँ! एक सेकंड रुको...`;
         setMessages((prev) => [
           ...prev,
           { text: redirectMessage, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
         ]);
         setConversationHistory((prev) => [
           ...prev,
-          { role: "user", parts: [{ text: userInput }] },
+          { role: "user", parts: [{ text: input }] },
           { role: "model", parts: [{ text: redirectMessage }] },
         ]);
+        speakText(hindiRedirectMessage); // Speak in Hindi
         setTimeout(() => navigate(redirectPath), 1000);
         setIsTyping(false);
         return;
@@ -188,7 +306,7 @@ const Chat = () => {
             parts: [{ text: `${medConfig.systemMessage}\n\n${languageInstruction}` }],
           },
           ...conversationHistory,
-          { role: "user", parts: [{ text: userInput }] },
+          { role: "user", parts: [{ text: input }] },
         ],
         generationConfig: {
           temperature: 0.9,
@@ -206,9 +324,28 @@ const Chat = () => {
 
       aiText = aiText.replace(/bandhu|Sir|sweetie/g, userName);
 
+      // Convert Hinglish response to Hindi for better pronunciation
+      const hindiText = aiText
+        .replace("Alekha", "अलेखा")
+        .replace("tu", "तू")
+        .replace("hai", "है")
+        .replace("main", "मैं")
+        .replace("tujhe", "तुझे")
+        .replace("pe", "पर")
+        .replace("le jati hoon", "ले जाती हूँ")
+        .replace("ek second ruko", "एक सेकंड रुको")
+        .replace("heart disease", "दिल की बीमारी")
+        .replace("ko dekhte hue", "को देखते हुए")
+        .replace("doctor", "डॉक्टर")
+        .replace("se milna", "से मिलना")
+        .replace("acha idea hai", "अच्छा विचार है")
+        .replace("Oops", "अरे")
+        .replace("Mu samajhi nahi", "मैं समझी नहीं")
+        .replace("fir ek bar bolo na", "फिर एक बार बोलो ना");
+
       setConversationHistory((prev) => [
         ...prev,
-        { role: "user", parts: [{ text: userInput }] },
+        { role: "user", parts: [{ text: input }] },
         { role: "model", parts: [{ text: aiText }] },
       ]);
 
@@ -216,12 +353,18 @@ const Chat = () => {
         ...prev,
         { text: aiText, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
       ]);
+
+      // Speak the Hindi version of the response
+      speakText(hindiText);
     } catch (error) {
       console.error("API Error:", error);
+      const errorMessage = `Oops, ${userName}! Mu samajhi nahi, fir ek bar bolo na... 😅....`;
+      const hindiErrorMessage = `अरे, ${userName}! मैं समझी नहीं, फिर एक बार बोलो ना... 😅....`;
       setMessages((prev) => [
         ...prev,
-        { text: `Oops, ${userName}! Mu samajhi nahi, fir ek bar bolo na... 😅....`, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+        { text: errorMessage, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
       ]);
+      speakText(hindiErrorMessage);
     } finally {
       setIsTyping(false);
     }
@@ -241,20 +384,41 @@ const Chat = () => {
           </div>
         ))}
         {isTyping && <div className={styles.typing}>⌛ Ruko, ${userName}, soch ke bolti hoon 🙄....</div>}
+        {isListening && <div className={styles.typing}>🎙️ Sun rahi hoon, bolte jao...</div>}
         <div ref={chatEndRef} />
       </div>
       <div className={styles.footer}>
-        <input
-          id="userInput"
-          type="text"
-          placeholder="Apni problem batao, bandhu..."
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-        />
-        <button id="sendButton" onClick={sendMessage}>
-          Consult
-        </button>
+        <div className={styles.inputWrapper}>
+          <span className={styles.smileyIcon}>😊</span>
+          <span className={styles.attachmentIcon}>📎</span>
+          <input
+            id="userInput"
+            type="text"
+            placeholder="Type a message..."
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+            className={styles.inputField}
+          />
+          {userInput.trim() ? (
+            <button
+              id="sendButton"
+              onClick={() => sendMessage()}
+              className={styles.sendButton}
+            >
+              <span role="img" aria-label="send">➡️</span>
+            </button>
+          ) : (
+            <button
+              id="micButton"
+              onClick={startListening}
+              disabled={isListening}
+              className={styles.micButton}
+            >
+              {isListening ? "🎙️" : "🎤"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

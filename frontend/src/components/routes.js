@@ -72,15 +72,15 @@ function RoutesOfThePage() {
                     <Route path="/register-as-doctor" element={<><Header /><DoctorRegister /></>} />
 
                     {/* User routes */}
-                    <Route path="/dashboard" element={<><Header /><Dashboard /><ChatBot/></>} />
+                    <Route path="/dashboard" element={<><Header /><Dashboard /></>} />
                     <Route path="/blood-donation" element={<><BloodDonateReceive/><NavBar/></>} />
-                    <Route path="/blood-donation-check" element={<><Header /><FetchDonors /><ChatBot/></>} />
+                    <Route path="/blood-donation-check" element={<><Header /><FetchDonors />    </>} />
 
-                    <Route path="/accident-detection" element={<><Header /><AccidentDetection /><ChatBot/></>} />
-                    <Route path='/blood-request-check' element={<><Header /><FetchRequest /><ChatBot/></>} />
+                    <Route path="/accident-detection" element={<><Header /><AccidentDetection /></>} />
+                    <Route path='/blood-request-check' element={<><Header /><FetchRequest /></>} />
 
                     {/* MAP */}
-                    <Route path="/map" element={<><Header /><MedicineStore /><ChatBot/></>} />
+                    <Route path="/map" element={<><Header /><MedicineStore /></>} />
 
                     {/* Doctor page routes */}
                     <Route path='/blood-donations-dr-page' element={<><Doctorheader /><DrBloodDonation /></>} />
@@ -112,7 +112,7 @@ function RoutesOfThePage() {
 
                     {/* Mobile Routes */}
                     <Route path='/Welcome' element={<><Welcome /></>} />
-                    <Route path='/home' element={<><Home /><NavBar/><ChatBot/></>} />
+                    <Route path='/home' element={<><Home /><NavBar/></>} />
                     <Route path='/profile' element={<><Profile/><NavBar/></>} />
                     <Route path='/blood-donate-receive' element={<><BloodDonateReceive/><NavBar/></>} />
                     <Route path='/accident-alert' element={<><AccidentAlert/><NavBar/></>} />
