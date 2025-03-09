@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useNavigate } from "react-router-dom";
 import styles from "./SuuSri.module.css";
+import Picker from "emoji-picker-react"; // For emoji picker
 
 const Chat = () => {
   const [userInput, setUserInput] = useState("");
@@ -9,6 +10,7 @@ const Chat = () => {
   const [conversationHistory, setConversationHistory] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const userName = "Alekha";
   const chatEndRef = useRef(null);
   const navigate = useNavigate();
@@ -18,13 +20,19 @@ const Chat = () => {
   const recognition = useRef(null);
   const synth = window.speechSynthesis;
 
+  // Load messages from localStorage on mount
   useEffect(() => {
+    const savedMessages = localStorage.getItem("suusriMessages");
+    if (savedMessages) {
+      setMessages(JSON.parse(savedMessages));
+    }
+
     if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognition.current = new SpeechRecognition();
       recognition.current.continuous = false;
       recognition.current.interimResults = false;
-      recognition.current.lang = "en-IN"; // For speech input (user might speak in Hinglish)
+      recognition.current.lang = "en-IN";
 
       recognition.current.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
@@ -45,15 +53,18 @@ const Chat = () => {
       recognition.current.onend = () => {
         setIsListening(false);
       };
-    } else {
-      console.warn("Speech recognition not supported in this browser.");
     }
 
-    // Ensure voices are loaded before speaking
     synth.onvoiceschanged = () => {
       console.log("Voices loaded:", synth.getVoices());
     };
   }, []);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("suusriMessages", JSON.stringify(messages));
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   // Alekha's EHR Data
   const ehrData = {
@@ -163,14 +174,9 @@ const Chat = () => {
     ];
     setConversationHistory(initialHistory);
 
-    // Speak the welcome message (convert to more Hindi-heavy for better pronunciation)
     const hindiWelcome = `स्वागत है, ${userName}! मैं हूँ सूसरी, आपकी प्यारी हेल्थ असिस्टेंट। बोलो ना, क्या हुआ है, बंधु? आज क्या मदद करूँ? ...`;
     speakText(hindiWelcome);
   }, [userName]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
 
   const redirectToFeature = (input) => {
     const lowerInput = input.toLowerCase();
@@ -241,15 +247,14 @@ const Chat = () => {
     }
     if ("speechSynthesis" in window) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "hi-IN"; // Hindi for Hinglish-like pronunciation
+      utterance.lang = "hi-IN";
       utterance.rate = 1;
-      utterance.pitch = 1.2; // Slightly higher pitch for a female voice
+      utterance.pitch = 1.2;
 
-      // Select a Hindi female voice
       const voices = synth.getVoices();
       const hindiVoice = voices.find(
-        (voice) => 
-          (voice.lang === "hi-IN" || voice.name.includes("Google हिन्दी")) && 
+        (voice) =>
+          (voice.lang === "hi-IN" || voice.name.includes("Google हिन्दी")) &&
           (voice.name.toLowerCase().includes("female") || voice.gender === "female")
       );
 
@@ -264,6 +269,54 @@ const Chat = () => {
     } else {
       console.warn("Speech synthesis not supported in this browser.");
     }
+  };
+
+  const onEmojiClick = (emojiObject) => {
+    setUserInput((prev) => prev + emojiObject.emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setMessages((prev) => [
+        ...prev,
+        { text: `Uploaded file: ${file.name}`, sender: "user", timestamp },
+      ]);
+      setConversationHistory((prev) => [
+        ...prev,
+        { role: "user", parts: [{ text: `Uploaded file: ${file.name}` }] },
+      ]);
+      const aiResponse = "File received! Main ise review karungi. Koi specific query hai iske baare mein?";
+      const hindiAiResponse = "फाइल मिल गई! मैं इसे देखूँगी। इसके बारे में कोई खास सवाल है?";
+      setMessages((prev) => [
+        ...prev,
+        { text: aiResponse, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+      ]);
+      setConversationHistory((prev) => [
+        ...prev,
+        { role: "model", parts: [{ text: aiResponse }] },
+      ]);
+      speakText(hindiAiResponse);
+    }
+  };
+
+  const deleteAllMessages = () => {
+    if (window.confirm("Are you sure you want to delete all messages?")) {
+      setMessages([]);
+      setConversationHistory([]);
+      localStorage.removeItem("suusriMessages");
+      const clearMessage = `All messages deleted, ${userName}! Main nayi shuruaat ke liye taiyaar hoon!`;
+      const hindiClearMessage = `सभी संदेश हटा दिए गए, ${userName}! मैं नई शुरुआत के लिए तैयार हूँ!`;
+      setMessages([{ text: clearMessage, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+      speakText(hindiClearMessage);
+    }
+  };
+
+  const handleQuickReply = (query) => {
+    setUserInput(query);
+    sendMessage(query);
   };
 
   const sendMessage = async (input = userInput) => {
@@ -289,7 +342,7 @@ const Chat = () => {
           { role: "user", parts: [{ text: input }] },
           { role: "model", parts: [{ text: redirectMessage }] },
         ]);
-        speakText(hindiRedirectMessage); // Speak in Hindi
+        speakText(hindiRedirectMessage);
         setTimeout(() => navigate(redirectPath), 1000);
         setIsTyping(false);
         return;
@@ -324,7 +377,6 @@ const Chat = () => {
 
       aiText = aiText.replace(/bandhu|Sir|sweetie/g, userName);
 
-      // Convert Hinglish response to Hindi for better pronunciation
       const hindiText = aiText
         .replace("Alekha", "अलेखा")
         .replace("tu", "तू")
@@ -354,7 +406,6 @@ const Chat = () => {
         { text: aiText, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
       ]);
 
-      // Speak the Hindi version of the response
       speakText(hindiText);
     } catch (error) {
       console.error("API Error:", error);
@@ -372,7 +423,12 @@ const Chat = () => {
 
   return (
     <div className={styles.chatContainer}>
-      <div className={styles.header}>Suusri - Smart Universal Urgent Support & Risk Identification</div>
+      <div className={styles.header}>
+        Suusri - Smart Universal Urgent Support & Risk Identification
+        <button onClick={deleteAllMessages} className={styles.deleteButton}>
+          Delete All Messages
+        </button>
+      </div>
       <div id="chatBox" className={styles.chatBox}>
         {messages.map((msg, index) => (
           <div
@@ -381,16 +437,41 @@ const Chat = () => {
             data-timestamp={msg.timestamp}
           >
             {msg.text}
+            <span className={styles.timestamp}>{msg.timestamp}</span>
           </div>
         ))}
-        {isTyping && <div className={styles.typing}>⌛ Ruko, ${userName}, soch ke bolti hoon 🙄....</div>}
+        {isTyping && <div className={styles.typing}>Typing...</div>}
         {isListening && <div className={styles.typing}>🎙️ Sun rahi hoon, bolte jao...</div>}
         <div ref={chatEndRef} />
       </div>
+      <div className={styles.quickReplies}>
+        <button onClick={() => handleQuickReply("Book doctor appointment")}>Book Appointment</button>
+        <button onClick={() => handleQuickReply("Blood donation")}>Blood Donation</button>
+        <button onClick={() => handleQuickReply("Medicine")}>Medicine</button>
+        <button onClick={() => handleQuickReply("Hospital")}>Hospital</button>
+      </div>
       <div className={styles.footer}>
         <div className={styles.inputWrapper}>
-          <span className={styles.smileyIcon}>😊</span>
-          <span className={styles.attachmentIcon}>📎</span>
+          <span
+            className={styles.smileyIcon}
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          >
+            😊
+          </span>
+          {showEmojiPicker && (
+            <div className={styles.emojiPicker}>
+              <Picker onEmojiClick={onEmojiClick} />
+            </div>
+          )}
+          <label className={styles.attachmentIcon}>
+            📎
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={handleFileUpload}
+              style={{ display: "none" }}
+            />
+          </label>
           <input
             id="userInput"
             type="text"
