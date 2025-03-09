@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Select from "react-select";
@@ -7,10 +7,14 @@ import "react-toastify/dist/ReactToastify.css";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Stethoscope, ChevronRight, Star, Video, MapPin, Clock } from "lucide-react";
-import styles from "../BloodTest/BloodTest.module.css"; // Reuse BloodTest.module.css for consistency
+import { Stethoscope, ChevronRight, Star } from "lucide-react";
+import styles from "../BloodTest/BloodTest.module.css";
+import html2pdf from "html2pdf.js";
+import { QRCodeCanvas } from "qrcode.react";
+import JsBarcode from "jsbarcode";
+import logo from "../../../assets/SwasthyaSetuLogo.png";
 
-// Simulated doctor data (replace with API/JSON in production)
+// Simulated doctor data
 const mockDoctors = [
   { id: 1, name: "Dr. R K Sharma", specialty: "Cardiologist", experience: "10 years", hospital: "Apollo Hospital", address: "Bhubaneswar, Odisha", rating: 4.8, availableNow: true, lat: 20.333, lng: 85.821 },
   { id: 2, name: "Dr. P K Mishra", specialty: "Dermatologist", experience: "8 years", hospital: "KIMS Hospital", address: "Patia, Bhubaneswar", rating: 4.5, availableNow: false, nextSlot: "Tomorrow, 10 AM", lat: 20.354, lng: 85.822 },
@@ -64,6 +68,8 @@ const mockDoctors = [
   { id: 50, name: "Dr. T Jena", specialty: "Oncologist", experience: "14 years", hospital: "Apollo Hospital", address: "Bhubaneswar, Odisha", rating: 4.8, availableNow: false, nextSlot: "Tomorrow, 1 PM", lat: 20.333, lng: 85.821 },
 ];
 
+
+
 // Leaflet icon setup
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -89,7 +95,6 @@ const UserIcon = L.divIcon({
   popupAnchor: [0, -10],
 });
 
-// Map click handler for location selection
 const MapClickHandler = ({ setPinLocation, setLatitude, setLongitude, setAddress }) => {
   useMapEvents({
     click(e) {
@@ -127,12 +132,15 @@ const Doctors = () => {
   const [pinLocation, setPinLocation] = useState(null);
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+  const [bookingDetailsList, setBookingDetailsList] = useState([]);
+  const barcodeRefs = useRef({});
 
   // Specialty and availability options
   const specialties = [
     { value: "Cardiologist", label: "Cardiologist" },
     { value: "Dermatologist", label: "Dermatologist" },
     { value: "Neurologist", label: "Neurologist" },
+    // Add more specialties as needed
   ];
 
   const availabilityOptions = [
@@ -145,6 +153,8 @@ const Doctors = () => {
     { value: "afternoon", label: "1:00 PM - 4:00 PM" },
     { value: "evening", label: "5:00 PM - 8:00 PM" },
   ];
+
+  const virtualMeetingUrl = "https://alekhakumarswain.github.io/OnlineAppointment-/#bhfhvy";
 
   // Get user location
   useEffect(() => {
@@ -159,6 +169,28 @@ const Doctors = () => {
       );
     }
   }, []);
+
+  // Load booking details from localStorage on mount
+  useEffect(() => {
+    const storedAppointments = JSON.parse(localStorage.getItem("doctorAppointments")) || [];
+    setBookingDetailsList(storedAppointments);
+  }, []);
+
+  // Generate barcodes for all booking slips
+  useEffect(() => {
+    bookingDetailsList.forEach(booking => {
+      const ref = barcodeRefs.current[booking.bookingId];
+      if (ref) {
+        JsBarcode(ref, booking.bookingId, {
+          format: "CODE128",
+          displayValue: true,
+          fontSize: 14,
+          width: 2,
+          height: 40,
+        });
+      }
+    });
+  }, [bookingDetailsList]);
 
   // Filter doctors
   const filteredDoctors = doctors.filter(doctor => 
@@ -175,9 +207,144 @@ const Doctors = () => {
       toast.error("Please fill in all required fields!");
       return;
     }
+
+    const bookingData = {
+      patientName: userName,
+      doctorName: selectedDoctor.name,
+      specialty: selectedDoctor.specialty,
+      hospitalName: selectedDoctor.hospital,
+      appointmentDate,
+      appointmentTime: appointmentTime.label,
+      appointmentType: appointmentType.label,
+      bookingId: `DOC${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+      patientId: `PAT${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+      email,
+      address: appointmentType.value === "inPerson" ? address : "N/A",
+      latitude: appointmentType.value === "inPerson" ? latitude : "N/A",
+      longitude: appointmentType.value === "inPerson" ? longitude : "N/A",
+      virtualMeetingUrl: appointmentType.value === "video" ? virtualMeetingUrl : null,
+    };
+
+    // Load existing appointments from localStorage
+    const existingAppointments = JSON.parse(localStorage.getItem("doctorAppointments")) || [];
+    const updatedAppointments = [...existingAppointments, bookingData];
+    
+    // Save to localStorage
+    localStorage.setItem("doctorAppointments", JSON.stringify(updatedAppointments));
+    setBookingDetailsList(updatedAppointments);
+
     toast.success(`Appointment booked with ${selectedDoctor.name}!`);
     setIsBookingPopupOpen(false);
-    // Here you could integrate with EHR, pharmacy, or other services
+
+    // Reset form fields
+    setUserName("");
+    setEmail("");
+    setAppointmentType(null);
+    setAppointmentDate("");
+    setAppointmentTime(null);
+    setAddress("");
+    setPinLocation(null);
+    setLatitude("");
+    setLongitude("");
+  };
+
+  const handleDownloadPDF = (bookingDetails) => {
+    if (!bookingDetails) return;
+
+    const qrCanvas = document.getElementById(`qrCodeCanvas-${bookingDetails.bookingId}`);
+    const qrCodeDataUrl = qrCanvas.toDataURL("image/png");
+    const barcodeCanvas = document.getElementById(`barcode-${bookingDetails.bookingId}`);
+    const barcodeDataUrl = barcodeCanvas.toDataURL("image/png");
+
+    const currentDate = new Date().toLocaleDateString();
+    const qrCodePayload = bookingDetails.appointmentType === "Video Consultation"
+      ? `${bookingDetails.virtualMeetingUrl}`
+      : `
+Patient Name: ${bookingDetails.patientName}
+Booking ID: ${bookingDetails.bookingId}
+Patient ID: ${bookingDetails.patientId}
+Doctor: ${bookingDetails.doctorName}
+Hospital: ${bookingDetails.hospitalName}
+Appointment Date: ${bookingDetails.appointmentDate}
+Appointment Time: ${bookingDetails.appointmentTime}
+      `.trim();
+
+    const wrapper = document.createElement("div");
+    wrapper.style.padding = "20px";
+    wrapper.style.fontFamily = "'Arial', sans-serif";
+    wrapper.style.background = "#f5f7fa";
+    wrapper.style.color = "#000000";
+    wrapper.style.lineHeight = "1.6";
+    wrapper.innerHTML = `
+      <div style="text-align: center; background: linear-gradient(90deg, #2ecc71, #27ae60); padding: 15px; border-radius: 15px 15px 0 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <img src="${logo}" alt="Swasthya Setu Logo" style="width: 90px; height: auto; margin-right: 15px;" />
+        <h1 style="font-size: 32px; font-weight: 700; color: #fff; margin: 0; display: inline; font-family: 'Playfair Display', serif;">Swasthya Setu</h1>
+        <p style="font-size: 16px; color: #fff; margin: 5px 0; font-family: 'Open Sans', sans-serif;">LogicLoom</p>
+        <p style="font-size: 14px; color: #fff; font-family: 'Open Sans', sans-serif;">Booking ID: ${bookingDetails.bookingId}</p>
+      </div>
+      <div style="background: #ffffff; padding: 25px; border-radius: 0 0 15px 15px; box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 250px; padding-right: 20px;">
+            <p style="font-size: 16px; margin: 8px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Patient Name:</strong> ${bookingDetails.patientName}</p>
+            <p style="font-size: 16px; margin: 8px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Booking ID:</strong> ${bookingDetails.bookingId}</p>
+            <p style="font-size: 16px; margin: 8px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Patient ID:</strong> ${bookingDetails.patientId}</p>
+            <p style="font-size: 16px; margin: 8px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Email:</strong> ${bookingDetails.email}</p>
+            <p style="font-size: 16px; margin: 8px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Date of Issue:</strong> ${currentDate}</p>
+          </div>
+          <div style="text-align: center; flex: 0 0 120px;">
+            <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 120px; height: 120px; border: 2px solid #e0e0e0; border-radius: 8px;" />
+            <p style="font-size: 12px; color: #666666; margin-top: 8px; font-family: 'Open Sans', sans-serif;">Scan to view ${bookingDetails.appointmentType === "Video Consultation" ? "meeting link" : "appointment details"}</p>
+          </div>
+        </div>
+        <hr style="border: 2px solid #000000; margin: 20px 0;" />
+        <h2 style="font-size: 24px; font-weight: 700; color: #2c3e50; text-align: center; margin-bottom: 20px; font-family: 'Playfair Display', serif;">DOCTOR APPOINTMENT SLIP</h2>
+        <div style="margin-bottom: 20px;">
+          <p style="font-size: 18px; margin: 10px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Doctor:</strong> ${bookingDetails.doctorName}</p>
+          <p style="font-size: 18px; margin: 10px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Specialty:</strong> ${bookingDetails.specialty}</p>
+          <p style="font-size: 18px; margin: 10px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Hospital:</strong> ${bookingDetails.hospitalName}</p>
+          <p style="font-size: 18px; margin: 10px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Appointment Date:</strong> ${bookingDetails.appointmentDate}</p>
+          <p style="font-size: 18px; margin: 10px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Appointment Time:</strong> ${bookingDetails.appointmentTime}</p>
+          <p style="font-size: 18px; margin: 10px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Appointment Type:</strong> ${bookingDetails.appointmentType}</p>
+          ${bookingDetails.appointmentType === "In-Person Consultation" ? `
+            <p style="font-size: 18px; margin: 10px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Address:</strong> ${bookingDetails.address}</p>
+            <p style="font-size: 18px; margin: 10px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Latitude:</strong> ${bookingDetails.latitude}</p>
+            <p style="font-size: 18px; margin: 10px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Longitude:</strong> ${bookingDetails.longitude}</p>
+          ` : ""}
+          ${bookingDetails.appointmentType === "Video Consultation" ? `
+            <p style="font-size: 18px; margin: 10px 0; font-family: 'Open Sans', sans-serif;"><strong style="color: #2c3e50;">Virtual Meeting URL:</strong> <a href="${bookingDetails.virtualMeetingUrl}" target="_blank" style="color: #27ae60;">${bookingDetails.virtualMeetingUrl}</a></p>
+          ` : ""}
+        </div>
+        <p style="font-size: 14px; color: #666666; margin-top: 15px; font-family: 'Open Sans', sans-serif;">
+          <strong style="color: #2c3e50;">Instructions:</strong> Please arrive 15 minutes early with this slip and any relevant medical records. For cancellation or rescheduling, contact the hospital at least 24 hours prior.${bookingDetails.appointmentType === "Video Consultation" ? " For virtual appointment, join using the provided link at the scheduled time." : ""}
+        </p>
+        <div style="text-align: center; margin-top: 25px;">
+          <img src="${barcodeDataUrl}" alt="Barcode" style="width: 180px; height: auto; border: 2px solid #e0e0e0; border-radius: 8px;" />
+          <p style="font-size: 12px; color: #666666; margin-top: 8px; font-family: 'Open Sans', sans-serif;">Booking ID: ${bookingDetails.bookingId}</p>
+        </div>
+        <p style="font-size: 12px; color: #666666; text-align: center; margin-top: 25px; font-family: 'Open Sans', sans-serif;">
+          Generated by Swasthya Setu on ${currentDate} | Confidential Appointment Slip
+        </p>
+      </div>
+    `;
+
+    const opt = {
+      margin: 0.5,
+      filename: `${bookingDetails.patientName}_Doctor_Appointment_${bookingDetails.bookingId}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+    };
+
+    document.body.appendChild(wrapper);
+    html2pdf()
+      .from(wrapper)
+      .set(opt)
+      .save()
+      .then(() => {
+        document.body.removeChild(wrapper);
+      })
+      .catch((err) => console.error("PDF generation failed:", err));
   };
 
   const selectStyles = {
@@ -270,6 +437,100 @@ const Doctors = () => {
         </div>
       </div>
 
+      {/* Booking Slips Section */}
+      {bookingDetailsList.length > 0 && (
+        <div className={styles.labsSection}>
+          <h2 className={styles.sectionTitle}>Your Appointments</h2>
+          {bookingDetailsList.map((bookingDetails, index) => (
+            <div key={index} className={styles.slipContainer}>
+              <div className={styles.section}>
+                <div className={styles.slipDetails}>
+                  <div className={styles.logoContainer}>
+                    <img src={logo} alt="Swasthya Setu Logo" className={styles.logo} />
+                    <h3 className={styles.brandTitle}>Swasthya Setu</h3>
+                  </div>
+                  <div className={styles.patientInfo}>
+                    <div className={styles.patientDetails}>
+                      <p className={styles.detailItem}><strong>Patient Name:</strong> {bookingDetails.patientName}</p>
+                      <p className={styles.detailItem}><strong>Booking ID:</strong> {bookingDetails.bookingId}</p>
+                      <p className={styles.detailItem}><strong>Patient ID:</strong> {bookingDetails.patientId}</p>
+                      <p className={styles.detailItem}><strong>Email:</strong> {bookingDetails.email}</p>
+                      <p className={styles.detailItem}><strong>Date of Issue:</strong> {new Date().toLocaleDateString()}</p>
+                    </div>
+                    <div className={styles.qrCodeContainer}>
+                      <QRCodeCanvas
+                        id={`qrCodeCanvas-${bookingDetails.bookingId}`}
+                        value={
+                          bookingDetails.appointmentType === "Video Consultation"
+                            ? `${bookingDetails.virtualMeetingUrl}`
+                            : `
+Patient Name: ${bookingDetails.patientName}
+Booking ID: ${bookingDetails.bookingId}
+Patient ID: ${bookingDetails.patientId}
+Doctor: ${bookingDetails.doctorName}
+Hospital: ${bookingDetails.hospitalName}
+Appointment Date: ${bookingDetails.appointmentDate}
+Appointment Time: ${bookingDetails.appointmentTime}
+                            `.trim()
+                        }
+                        size={120}
+                        level="H"
+                      />
+                      <p className={styles.qrCodeText}>
+                        Scan to view {bookingDetails.appointmentType === "Video Consultation" ? "meeting link" : "appointment details"}
+                      </p>
+                    </div>
+                  </div>
+                  <hr className={styles.divider} />
+                  <h3 className={styles.appointmentTitle}>Doctor Appointment Slip</h3>
+                  <div className={styles.appointmentDetails}>
+                    <p className={styles.detailItem}><strong>Doctor:</strong> {bookingDetails.doctorName}</p>
+                    <p className={styles.detailItem}><strong>Specialty:</strong> ${bookingDetails.specialty}</p>
+                    <p className={styles.detailItem}><strong>Hospital:</strong> ${bookingDetails.hospitalName}</p>
+                    <p className={styles.detailItem}><strong>Appointment Date:</strong> ${bookingDetails.appointmentDate}</p>
+                    <p className={styles.detailItem}><strong>Appointment Time:</strong> ${bookingDetails.appointmentTime}</p>
+                    <p className={styles.detailItem}><strong>Appointment Type:</strong> ${bookingDetails.appointmentType}</p>
+                    {bookingDetails.appointmentType === "In-Person Consultation" && (
+                      <>
+                        <p className={styles.detailItem}><strong>Address:</strong> ${bookingDetails.address}</p>
+                        <p className={styles.detailItem}><strong>Latitude:</strong> ${bookingDetails.latitude}</p>
+                        <p className={styles.detailItem}><strong>Longitude:</strong> ${bookingDetails.longitude}</p>
+                      </>
+                    )}
+                    {bookingDetails.appointmentType === "Video Consultation" && (
+                      <p className={styles.detailItem}>
+                        <strong>Virtual Meeting URL:</strong> <a href={bookingDetails.virtualMeetingUrl} target="_blank" rel="noopener noreferrer">{bookingDetails.virtualMeetingUrl}</a>
+                      </p>
+                    )}
+                    <p className={styles.instructions}>
+                      <strong>Instructions:</strong> Please arrive 15 minutes early with this slip and any relevant medical records. For cancellation or rescheduling, contact the hospital at least 24 hours prior.
+                      {bookingDetails.appointmentType === "Video Consultation" && " For virtual appointment, join using the provided link at the scheduled time."}
+                    </p>
+                  </div>
+                  <div className={styles.barcodeContainer}>
+                    <canvas
+                      id={`barcode-${bookingDetails.bookingId}`}
+                      ref={el => (barcodeRefs.current[bookingDetails.bookingId] = el)}
+                      className={styles.barcode}
+                    />
+                    <p className={styles.qrCodeText}>Booking ID: ${bookingDetails.bookingId}</p>
+                  </div>
+                  <p className={styles.footerText}>
+                    Generated by Swasthya Setu on ${new Date().toLocaleDateString()} | Confidential Appointment Slip
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleDownloadPDF(bookingDetails)}
+                  className={styles.downloadButton}
+                >
+                  Download Appointment Slip
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Booking Popup */}
       {isBookingPopupOpen && (
         <div className="modal show d-block" style={{ background: "rgba(0, 0, 0, 0.5)", zIndex: 1040 }}>
@@ -277,7 +538,7 @@ const Doctors = () => {
             <div className="modal-content" style={{ borderRadius: "15px", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)" }}>
               <div className="modal-header" style={{ background: "linear-gradient(45deg, #27ae60, #2ecc71)", color: "#fff" }}>
                 <h5 className="modal-title" style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 600 }}>
-                  Book Appointment with {selectedDoctor?.name}
+                  Book Appointment with ${selectedDoctor?.name}
                 </h5>
                 <button type="button" className="btn-close" onClick={() => setIsBookingPopupOpen(false)}></button>
               </div>

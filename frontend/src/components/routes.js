@@ -73,7 +73,7 @@ function RoutesOfThePage() {
 
                     {/* User routes */}
                     <Route path="/dashboard" element={<><Header /><Dashboard /><ChatBot/></>} />
-                    <Route path="/blood-donation" element={<><Header /><BloodDonation /><ChatBot/></>} />
+                    <Route path="/blood-donation" element={<><BloodDonateReceive/><NavBar/></>} />
                     <Route path="/blood-donation-check" element={<><Header /><FetchDonors /><ChatBot/></>} />
 
                     <Route path="/accident-detection" element={<><Header /><AccidentDetection /><ChatBot/></>} />
@@ -132,7 +132,7 @@ function RoutesOfThePage() {
                     <Route path="/nutrition" element={<><Nutrition /><NavBar/></>} />
                     <Route path="/EHRHealthData" element={<><EHRHealthData patientId="67ccc44c671f5aa635f458e1"/><NavBar/></>} />
                     <Route path='/ambulance' element={<><Ambulance/><NavBar/></>} />
-                    <Route path='/suusri' element={<><Chat/><NavBar/></>}/>
+                    <Route path='/suusri' element={<><Chat/></>}/>
                     <Route path='/hospitals' element={<><HospitalDashboard/><NavBar/></>} />
                     <Route path="/all-hospitals" element={<><AllHospitals/><NavBar/></>} />
                     <Route path="/medical-records" element={<><MedicalRecords /><NavBar/></>} />    

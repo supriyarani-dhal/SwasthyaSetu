@@ -1,35 +1,51 @@
 import React, { useState, useEffect, useRef } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import styles from "./SuuSri.module.css";
-import { Languages } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import styles from "./SuuSri.module.css"; // Verify this path matches your project structure
 
 const Chat = () => {
   const [userInput, setUserInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [conversationHistory, setConversationHistory] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [userName, setUserName] = useState(""); // User's name storage
+  const userName = "Alekha"; // Removed setUserName since it's static
   const chatEndRef = useRef(null);
-  const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY || "AIzaSyDJ7nuaU3xBtB2H6VPGDes8vtICGbrRTCo"; // Move to .env
+  const navigate = useNavigate();
+  const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY || "AIzaSyDJ7nuaU3xBtB2H6VPGDes8vtICGbrRTCo";
 
-  // Temporarily commented out speakText function
-  /*
-  const speakText = (text) => {
-    if (synth.speaking) {
-      console.error("SpeechSynthesis is already speaking.");
-      return;
-    }
-    if ("speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "hi-IN"; // Forced to Hinglish pronunciation
-      utterance.rate = 1;
-      utterance.pitch = 1;
-      synth.speak(utterance);
-    } else {
-      console.warn("Speech synthesis not supported in this browser.");
-    }
+  // Alekha's EHR Data
+  const ehrData = {
+    name: "Alekha Kumar Swain",
+    dob: "3/13/2025",
+    gender: "male",
+    bloodGroup: "A-",
+    occupation: "self-employed",
+    bloodDonations: 1,
+    lastDonation: "12/9/2024",
+    donationEligibility: true,
+    weight: "67 kg",
+    height: "123 cm",
+    bloodPressure: "not specified",
+    chronicConditions: ["heart disease"],
+    familyHistory: ["risk of stroke"],
+    surgeries: "none",
+    medicationAllergies: "none",
+    currentMedications: "none",
+    pastMedications: "none",
+    ongoingTherapies: "none",
+    lifestyle: {
+      smoking: "never smoker",
+      exercise: "rarely",
+      sleep: "3 hours daily",
+      diet: "vegetarian",
+      alcohol: "never",
+    },
+    doctorNotes: {
+      primarySymptoms: "none",
+      initialDiagnosis: "none",
+      followUpRequired: "no",
+    },
   };
-  */
 
   const medConfig = {
     identity: {
@@ -68,35 +84,30 @@ const Chat = () => {
       - When asked about creator/developer, respond in user's language
       - For casual greetings, respond warmly in user's language
       6. Keep essential English medical terms intact
-      7. Always include disclaimers in the response language
-      8. Be tolerant of mixed language inputs
+      7. Be tolerant of mixed language inputs
+      
+      **User's EHR Data:**
+      ${JSON.stringify(ehrData, null, 2)}
+      
+      Instructions:
+      - Use the EHR data to provide personalized health suggestions based on the user's medical history, lifestyle, and family history.
+      - Suggest actions like doctor visits, lifestyle changes, or reminders based on the EHR when relevant to the user's input.
+      - If the user mentions specific app features (e.g., "blood donation," "doctor appointment," "medicine store"), respond briefly and then indicate you’re redirecting them to the relevant section of the Swasthya Setu app.
       
       Examples:
-      User (Odia): "ମୋର ଥଣ୍ଡା ଲାଗିଛି"
-      Response: "ଥଣ୍ଡା କେତେ ଦିନ ହେଲା? 🤧 ଗରମ ପାଣି ପିଅନ୍ତୁ ଏବଂ ବିଶ୍ରାମ କରନ୍ତୁ। 3 ଦିନ ମଧ୍ୟରେ ଉନ୍ନତି ନହେଲେ ଡାକ୍ତରଙ୍କୁ ଦେଖାନ୍ତୁ 🏥"
-
-      User (Hinglish): "Mera pet kharab hai"
-      Response: "Pet dard ke saath koi aur symptoms? 🤢 Jaise ulti ya bukhar? 6 ghante tak khali pet rahein aur ORS ka solution piye. 💧"`,
+      User (Hinglish): "Mujhe blood donate karna hai"
+      Response: "Alekha, tu eligible hai blood donate karne ke liye since last donation 12/9/2024 ko tha. Chalo, main tujhe blood donation page pe le jati hoon!"
+      
+      User (Hinglish): "Mujhe doctor se milna hai"
+      Response: "Alekha, heart disease history ko dekhte hue doctor se milna acha idea hai. Main tujhe doctors page pe redirect karti hoon!"`,
   };
 
   const genAI = new GoogleGenerativeAI(API_KEY);
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  const detectLanguage = (text) => {
-    // Since all responses will be in Hinglish, this is overridden in the payload
-    const hasOdia = /[ଅ-ଳ]/.test(text);
-    const hasHindi = /[अ-ह]/.test(text);
-    const hasEnglish = /[a-zA-Z]/.test(text);
-
-    if (hasOdia) return "Odia";
-    if (hasHindi && hasEnglish) return "Hinglish";
-    if (hasHindi) return "Hindi";
-    return "English";
-  };
-
   useEffect(() => {
     const initialMessages = [{
-      text: "Welcome, mere sir! Main hoon Suusri, apki cute health assistant. kya hua hai, bandhu? Aaj kya help karu? ...",
+      text: `Welcome, ${userName}! Main hoon Suusri, apki cute health assistant.  Kya hua hai, bandhu? Aaj kya help karu? ...`,
       sender: "ai",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     }];
@@ -105,15 +116,39 @@ const Chat = () => {
     const initialHistory = [
       {
         role: "model",
-        parts: [{ text: "Welcome, mere Sir! Main hoon Suusri, teri cute health assistant. Kan heigala, bandhu? Aaj kya help karu? ...." }],
+        parts: [{ text: `Welcome, ${userName}! Main hoon Suusri, teri cute health assistant.  Kya hua hai, bandhu? Aaj kya help karu? ...` }],
       },
     ];
     setConversationHistory(initialHistory);
-  }, []);
+  }, [userName]); // Added userName to dependency array
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const redirectToFeature = (input) => {
+    const lowerInput = input.toLowerCase();
+    if (lowerInput.includes("blood donate") || lowerInput.includes("blood donation")) {
+      return "/blood-donation";
+    } else if (lowerInput.includes("doctor") || lowerInput.includes("appointment")) {
+      return "/doctors";
+    } else if (lowerInput.includes("medicine") || lowerInput.includes("dawai")) {
+      return "/medicine-stores";
+    } else if (lowerInput.includes("hospital") || lowerInput.includes("aspatal")) {
+      return "/all-hospitals";
+    } else if (lowerInput.includes("accident") || lowerInput.includes("emergency")) {
+      return "/accident-alert";
+    } else if (lowerInput.includes("blood test") || lowerInput.includes("test")) {
+      return "/blood-test";
+    } else if (lowerInput.includes("nutrition") || lowerInput.includes("diet")) {
+      return "/nutrition";
+    } else if (lowerInput.includes("ambulance")) {
+      return "/ambulance";
+    } else if (lowerInput.includes("ehr") || lowerInput.includes("health data")) {
+      return "/EHRHealthData";
+    }
+    return null;
+  };
 
   const sendMessage = async () => {
     if (!userInput.trim()) return;
@@ -124,14 +159,24 @@ const Chat = () => {
     setUserInput("");
     setIsTyping(true);
 
-    // Check for user's name in input
-    const nameMatch = userInput.match(/my name is (\w+)/i);
-    if (nameMatch) {
-      setUserName(nameMatch[1]);
-    }
-
     try {
-      // Force Hinglish language for all responses
+      const redirectPath = redirectToFeature(userInput);
+      if (redirectPath) {
+        const redirectMessage = `Alekha, main tujhe ${redirectPath.split('/')[1].replace('-', ' ')} page pe le jati hoon! Ek second ruko...`;
+        setMessages((prev) => [
+          ...prev,
+          { text: redirectMessage, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+        ]);
+        setConversationHistory((prev) => [
+          ...prev,
+          { role: "user", parts: [{ text: userInput }] },
+          { role: "model", parts: [{ text: redirectMessage }] },
+        ]);
+        setTimeout(() => navigate(redirectPath), 1000);
+        setIsTyping(false);
+        return;
+      }
+
       const userLang = "Hinglish";
       console.log("Forced language for this message:", userLang);
 
@@ -159,10 +204,7 @@ const Chat = () => {
 
       if (!aiText) throw new Error("Empty response from API");
 
-      // Add user's name or pet name to the response if known
-      if (userName) {
-        aiText = aiText.replace(/bandhu|Sir|sweetie/g, userName);
-      }
+      aiText = aiText.replace(/bandhu|Sir|sweetie/g, userName);
 
       setConversationHistory((prev) => [
         ...prev,
@@ -174,12 +216,11 @@ const Chat = () => {
         ...prev,
         { text: aiText, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
       ]);
-      // speakText(aiText); // Commented out as per request
     } catch (error) {
       console.error("API Error:", error);
       setMessages((prev) => [
         ...prev,
-        { text: `Oops, Sir! Mu samajhi nahi, fir ek bar bolo na... 😅💕....`, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+        { text: `Oops, ${userName}! Mu samajhi nahi, fir ek bar bolo na... 😅....`, sender: "ai", timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
       ]);
     } finally {
       setIsTyping(false);
@@ -188,7 +229,7 @@ const Chat = () => {
 
   return (
     <div className={styles.chatContainer}>
-      <div className={styles.header}>Suusri - Tera Health Assistant</div>
+      <div className={styles.header}>Suusri - Smart Universal Urgent Support & Risk Identification</div>
       <div id="chatBox" className={styles.chatBox}>
         {messages.map((msg, index) => (
           <div
@@ -197,12 +238,9 @@ const Chat = () => {
             data-timestamp={msg.timestamp}
           >
             {msg.text}
-            {msg.sender === "ai" && (
-              <span className={styles.speakerIcon} /* onClick={() => speakText(msg.text)} */ />
-            )}
           </div>
         ))}
-        {isTyping && <div className={styles.typing}>⌛ Ruko, Sir, soch ke bolti hoon 🙄....</div>}
+        {isTyping && <div className={styles.typing}>⌛ Ruko, ${userName}, soch ke bolti hoon 🙄....</div>}
         <div ref={chatEndRef} />
       </div>
       <div className={styles.footer}>

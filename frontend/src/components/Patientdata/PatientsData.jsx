@@ -394,7 +394,7 @@ const PatientsData = () => {
                         </label>
                     </div>
                     <div className={styles.inputGroup}>
-                        <p className={styles.inputLabel}>Eligible for Donation?</p>
+                        <p className={styles.inputLabel}>Intrested for Donate Blood?</p>
                         <div className={styles.radioGroup}>
                             <label className={styles.radioOption}>
                                 <input
