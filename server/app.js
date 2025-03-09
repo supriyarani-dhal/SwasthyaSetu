@@ -6,6 +6,8 @@ const authRoutes = require('./routes/auth');
 const doctorRoutes = require('./routes/doctor');
 const bloodRoutes = require('./routes/blood');
 const accidentRoutes = require('./routes/accident');
+const patientRoutes = require("./Patient");
+
 // const patientRoutes = require('./routes/patient'); // Comment out or remove
 
 const app = express();
@@ -32,6 +34,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/doctor', doctorRoutes);
 app.use('/api/blood', bloodRoutes);
 app.use('/api/accident', accidentRoutes);
+app.use("/api", patientRoutes);
 // app.use('/api/patient', patientRoutes); // Comment out or remove
 
 module.exports = app;

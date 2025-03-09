@@ -39,7 +39,7 @@ const Home = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.greeting}>Hello Raja</h1>
+        <h1 className={styles.greeting}>Hello Alekha</h1>
         <div className={styles.avatar}>
           <img 
               src={usericon} 

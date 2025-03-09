@@ -130,7 +130,7 @@ function RoutesOfThePage() {
                     <Route path="/track-order" element={<><TrackOrder/></>} />
                     <Route path="/medicine-schedule" element={<><MedicineSchedule /><NavBar/></>} />
                     <Route path="/nutrition" element={<><Nutrition /><NavBar/></>} />
-                    <Route path="/EHRHealthData" element={<><EHRHealthData patientId="67c35f1c8b405ef1defec414"/><NavBar/></>} />
+                    <Route path="/EHRHealthData" element={<><EHRHealthData patientId="67ccc44c671f5aa635f458e1"/><NavBar/></>} />
                     <Route path='/ambulance' element={<><Ambulance/><NavBar/></>} />
                     <Route path='/suusri' element={<><Chat/><NavBar/></>}/>
                     <Route path='/hospitals' element={<><HospitalDashboard/><NavBar/></>} />

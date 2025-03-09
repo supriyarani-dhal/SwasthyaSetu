@@ -18,6 +18,7 @@ const EHRHealthData = ({ patientId }) => {
         const response = await axios.get(`http://localhost:2000/api/patients/${patientId}`, {
           withCredentials: true,
         });
+        console.log(response.data);
         setPatientData(response.data);
         setLoading(false);
         fetchAIInsights(response.data);

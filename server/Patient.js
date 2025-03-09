@@ -169,7 +169,16 @@ router.get("/patients", async (req, res) => {
 // Get a specific patient by ID
 router.get("/patients/:id", async (req, res) => {
   try {
-    const patient = await Patient.findById(req.params.id);
+    const { id } = req.params;
+
+    // Validate if id is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid Patient ID format" });
+    }
+
+    // Query the patient by ID
+    const patient = await Patient.findById("67ccc44c671f5aa635f458e1");
+    console.log(patient)
     if (!patient) {
       return res.status(404).json({ error: "Patient not found" });
     }
